@@ -31,7 +31,7 @@ def _hex(addr) -> str:
 
 
 def _deploy(direct_deploy):
-    return direct_deploy("contracts/rule_registry.py", MIN_BOND, "")
+    return direct_deploy("contracts/rule_registry.py", MIN_BOND)
 
 
 def _mock_llm(direct_vm, statuses):

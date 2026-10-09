@@ -39,7 +39,7 @@ TERMINAL = {"COMPLIANT", "NON_COMPLIANT", "INCONCLUSIVE"}
 
 def _deploy():
     factory = get_contract_factory(contract_file_path="rule_registry.py")
-    return factory.deploy(args=[MIN_BOND, ""])
+    return factory.deploy(args=[MIN_BOND])
 
 
 def test_deploy_and_read_state():

@@ -1,3 +1,4 @@
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
@@ -209,12 +210,13 @@ class RuleRegistry(gl.Contract):
     slashed_total: u256
     withdrawn_slashed: u256
 
-    def __init__(self, min_bond: int, treasury: str):
+    def __init__(self, min_bond: int):
+        # Treasury defaults to the deployer; owner can retarget it via
+        # set_treasury. (Constructor takes no address arg: the deploy CLI
+        # coerces 0x literals to Address calldata and empty strings to 0,
+        # which cannot reliably encode a `str` constructor param.)
         self.owner = gl.message.sender_address
-        if treasury == "":
-            self.treasury = gl.message.sender_address
-        else:
-            self.treasury = Address(treasury)
+        self.treasury = gl.message.sender_address
         self.min_bond = u256(int(min_bond))
         self.next_id = u256(0)
         self.verified_count = u256(0)

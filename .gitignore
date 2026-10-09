@@ -49,3 +49,12 @@ Thumbs.db
 
 # --- Scratch / one-off SDK probe dirs (never commit) ---
 .tmp_*/
+/deploy_out.txt
+/estimate.json
+/rec_*.txt
+/receipt_*.txt
+
+# --- Local, token-reading setup helpers (never commit) ---
+/gh_setup.ps1
+/gh_push.ps1
+/setup_*.ps1

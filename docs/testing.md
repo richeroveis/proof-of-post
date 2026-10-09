@@ -9,10 +9,13 @@ genvm-lint check contracts/rule_registry.py
 ```
 
 Result: **PASS**. `validate: ok=true`. Contract `RuleRegistry`, 9 methods
-(4 view, 5 write), constructor params 2. The runner pin
-`py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` is accepted.
-A non-blocking note reports a newer runner is available; we keep the pinned
-runner for reproducibility and re-evaluate it before submission.
+(4 view, 5 write), constructor params 1 (`min_bond`; the treasury defaults to
+the deployer — see `docs/deployment.md` finding 3). The runner pin
+`py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` is accepted,
+preceded by the `# v0.2.16` version-preamble line that the Studio Devnet
+executor requires. A non-blocking note reports a newer runner is available; it
+cannot be loaded by the current public toolchain (`docs/deployment.md`
+finding 4), so we keep the pinned runner and re-evaluate before submission.
 
 ## 2. Behavioral tests — direct mode
 
@@ -53,13 +56,18 @@ $env:RUN_INTEGRATION='1'
 gltest tests/integration/ -v -s --network studio-dev
 ```
 
-`tests/integration/test_rule_registry_integration.py` runs under full leader +
-validator consensus and asserts only genuinely deterministic transitions (deploy,
-bond-gated submit, resolved-entry double-evaluate revert, appeal authorization) —
-a real LLM verdict is non-reproducible and is therefore not pinned to an exact
-status. The suite is skipped by default (`RUN_INTEGRATION` guard) and is executed
-as part of the Phase 7 deployment against the Studio dev network, the same
-authoritative GenVM the project ships on.
+`tests/integration/test_rule_registry_integration.py` (deploy args `[MIN_BOND]`)
+is written for full
+leader + validator consensus and asserts only genuinely deterministic
+transitions (deploy, bond-gated submit, resolved-entry double-evaluate revert,
+appeal authorization) — a real LLM verdict is non-reproducible and is therefore
+not pinned to an exact status. The suite is skipped by default
+(`RUN_INTEGRATION` guard): the shipped `gltest` has no studio-dev network
+profile and no fee-deposit flow, while studio-dev charges a non-zero fee on
+every transaction (`docs/deployment.md` finding 1). Consensus is instead
+proven on the real network by the accepted production deploy (leader + all
+validators executed with return) and by the bounded Phase 9 on-chain activity
+run through the CLI, which speaks the studio-dev fee model natively.
 
 ### Why not GLSim locally
 
