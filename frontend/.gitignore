@@ -1,0 +1,16 @@
+# dependencies
+/node_modules
+
+# next build output
+/.next
+/out
+
+# env (real values never committed; NEXT_PUBLIC_* are placeholders in .env.example)
+.env
+.env.local
+.env.*.local
+
+# misc
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts.bak
