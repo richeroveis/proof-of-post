@@ -188,6 +188,12 @@ export default function Dashboard() {
             stored or transmitted raw.
           </div>
         )}
+        <div className="notice">
+          <strong>Write status:</strong> studio-dev charges a non-zero fee deposit on every transaction and
+          the browser SDK (genlayer-js 1.1.8) cannot attach one yet, so writes from this page are currently
+          rejected on-chain with <code>FeeValueMustBeNonZero</code>. All on-chain activity is being executed
+          through the fee-aware GenLayer CLI; the reads above are live contract state.
+        </div>
         <div className="form">
           <label>Signer private key (in-memory)</label>
           <div className="rowbtns">
