@@ -9,6 +9,10 @@ import {
   readStats,
   readEntries,
   readEntry,
+  readBalance,
+  makeWriteClient,
+  estimateFees,
+  waitForDecided,
   writeSubmit,
   writeEvaluate,
   writeAppeal,
@@ -45,6 +49,11 @@ export default function Dashboard() {
   const [rulesBlob, setRulesBlob] = useState("");
   const [bondGen, setBondGen] = useState("1");
   const [busy, setBusy] = useState(false);
+  // studio-dev is not gasless: every write needs a non-zero fee deposit, and
+  // consensus takes a round or two, so the UI shows both while acting.
+  const [feeGen, setFeeGen] = useState<string | null>(null);
+  const [signerBalance, setSignerBalance] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!CONTRACT_ADDRESS) return;
@@ -73,10 +82,40 @@ export default function Dashboard() {
       setSigner(acc);
       setFlash(`Signer connected: ${acc.address}`);
       setError(null);
+      // Read the account's GEN balance and the network's current fee quote so
+      // the user knows upfront whether this key can afford a write.
+      try {
+        const [bal, fee] = await Promise.all([
+          readBalance(acc.address),
+          estimateFees(makeWriteClient(acc as any)),
+        ]);
+        setSignerBalance(formatEther(bal));
+        setFeeGen(formatEther(fee));
+      } catch {
+        setSignerBalance(null);
+        setFeeGen(null);
+      }
     } catch (err: any) {
       setSigner(null);
+      setSignerBalance(null);
+      setFeeGen(null);
       setError("Invalid private key. " + String(err?.message || err));
     }
+  }
+
+  // Run a write, then wait for the protocol to reach a terminal lifecycle state
+  // before re-reading contract state — a tx hash alone says nothing about the
+  // validator verdict.
+  async function runWrite(label: string, fn: () => Promise<any>) {
+    if (!signer) throw new Error("Connect a signer first.");
+    const hash = String(await fn());
+    setFlash(`${label} submitted → ${hash} · waiting for validator consensus…`);
+    setPending(label);
+    const status = await waitForDecided(makeWriteClient(signer as any), hash);
+    setPending(null);
+    setFlash(`${label} finished with lifecycle ${status} · ${hash}`);
+    await refresh();
+    return status;
   }
 
   async function onView(id: number) {
@@ -96,11 +135,10 @@ export default function Dashboard() {
     setFlash(null);
     try {
       const bondWei = parseEther(bondGen);
-      const res = await writeSubmit(signer as any, title, content, rulesBlob, bondWei);
-      setFlash(`submit sent → ${typeof res === "string" ? res : JSON.stringify(res)}`);
+      await runWrite("submit", () => writeSubmit(signer as any, title, content, rulesBlob, bondWei));
       setTitle(""); setContent(""); setRulesBlob("");
-      await refresh();
     } catch (err: any) {
+      setPending(null);
       setError(String(err?.shortMessage || err?.message || err));
     } finally {
       setBusy(false);
@@ -111,10 +149,9 @@ export default function Dashboard() {
     if (!signer) { setError("Connect a signer first."); return; }
     setBusy(true); setError(null); setFlash(null);
     try {
-      const res = await writeEvaluate(signer as any, id);
-      setFlash(`evaluate #${id} sent → ${typeof res === "string" ? res : JSON.stringify(res)}`);
-      await refresh();
+      await runWrite(`evaluate #${id}`, () => writeEvaluate(signer as any, id));
     } catch (err: any) {
+      setPending(null);
       setError(String(err?.shortMessage || err?.message || err));
     } finally {
       setBusy(false);
@@ -125,10 +162,9 @@ export default function Dashboard() {
     if (!signer) { setError("Connect a signer first."); return; }
     setBusy(true); setError(null); setFlash(null);
     try {
-      const res = await writeAppeal(signer as any, id);
-      setFlash(`appeal #${id} sent → ${typeof res === "string" ? res : JSON.stringify(res)}`);
-      await refresh();
+      await runWrite(`appeal #${id}`, () => writeAppeal(signer as any, id));
     } catch (err: any) {
+      setPending(null);
       setError(String(err?.shortMessage || err?.message || err));
     } finally {
       setBusy(false);
@@ -189,10 +225,12 @@ export default function Dashboard() {
           </div>
         )}
         <div className="notice">
-          <strong>Write status:</strong> studio-dev charges a non-zero fee deposit on every transaction and
-          the browser SDK (genlayer-js 1.1.8) cannot attach one yet, so writes from this page are currently
-          rejected on-chain with <code>FeeValueMustBeNonZero</code>. All on-chain activity is being executed
-          through the fee-aware GenLayer CLI; the reads above are live contract state.
+          <strong>Costs:</strong> studio-dev is not gasless — each write carries a network fee deposit
+          {feeGen ? <> (currently <code>{feeGen} GEN</code>, quoted by the node per transaction)</> : <> quoted by the node per transaction</>},
+          paid by the signer on top of the bond. {signerBalance !== null && (
+            <>Signer balance: <code>{signerBalance} GEN</code>.</>
+          )}
+          {pending && <> <strong>{pending}</strong> is in validator consensus — a verdict usually lands within a couple of minutes.</>}
         </div>
         <div className="form">
           <label>Signer private key (in-memory)</label>
@@ -218,8 +256,8 @@ export default function Dashboard() {
           <input value={bondGen} onChange={(e) => setBondGen(e.target.value)} />
 
           <div className="actions">
-            <button onClick={onSubmit} disabled={!signer || busy || notDeployed || !content.trim() || !rulesBlob.trim()}>
-              {busy ? "Submitting…" : "submit (payable)"}
+            <button onClick={onSubmit} disabled={!signer || busy || !!pending || notDeployed || !content.trim() || !rulesBlob.trim()}>
+              {busy ? "Working…" : "submit (payable)"}
             </button>
             <span className="small">Creates a PENDING entry and locks the bond.</span>
           </div>
@@ -240,10 +278,10 @@ export default function Dashboard() {
               <span className="rowbtns">
                 <button onClick={() => onView(Number(e.entry_id))}>View</button>
                 {signer && e.status === "PENDING" && (
-                  <button onClick={() => onEvaluate(Number(e.entry_id))} disabled={busy}>Evaluate</button>
+                  <button onClick={() => onEvaluate(Number(e.entry_id))} disabled={busy || !!pending}>Evaluate</button>
                 )}
                 {signer && e.status === "NON_COMPLIANT" && (
-                  <button onClick={() => onAppeal(Number(e.entry_id))} disabled={busy}>Appeal</button>
+                  <button onClick={() => onAppeal(Number(e.entry_id))} disabled={busy || !!pending}>Appeal</button>
                 )}
               </span>
             </div>

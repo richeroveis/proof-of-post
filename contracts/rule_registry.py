@@ -48,6 +48,24 @@ MAX_REASON_LEN = 1000
 _VALID_CS = [CS_SATISFIED, CS_VIOLATED, CS_UNVERIFIABLE]
 
 
+@gl.evm.contract_interface
+class _GENReceiver:
+    """Empty EVM interface used only to pay native GEN to an address.
+
+    Bond payouts must be EXTERNAL messages (GenVM -> GenLayer Chain), because
+    submitters/recipients are normally externally owned accounts. Using
+    gl.get_contract_at(to).emit_transfer(...) would be an INTERNAL IC->IC
+    message, which is silently never delivered to an EOA: on studio-dev the
+    ledger accounting updated but the GEN stayed in the contract.
+    """
+
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
 @allow_storage
 @dataclass
 class Entry:
@@ -435,4 +453,7 @@ class RuleRegistry(gl.Contract):
     @gl.private
     def _send(self, to: Address, amount: u256) -> None:
         if amount > 0:
-            gl.get_contract_at(to).emit_transfer(value=amount, on="finalized")
+            # External message: EVM-layer message kwargs accept only `value`
+            # (external messages always execute on finalization), so an EOA
+            # recipient actually receives the GEN.
+            _GENReceiver(to).emit_transfer(value=amount)

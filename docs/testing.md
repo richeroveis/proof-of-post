@@ -39,6 +39,17 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 - Validator: agrees on independent re-derivation, disagrees on a mismatched
   leader status, and disagrees on leader LLM error (forces rotation).
 
+### What direct mode cannot see
+
+Direct mode does not model native GEN transfers: `emit_transfer` is a no-op, so
+these tests assert the contract's internal ledger (`verified_count`,
+`slashed_total`, `withdrawn_slashed`) and never a recipient's balance. That
+boundary cost us a real bug — the first deployed version paid bonds out with an
+internal IC→IC message, which an EOA can never receive, and **all 22 direct
+tests still passed**. Payout delivery is therefore covered by the live
+settlement regression in `docs/onchain-activity.md`, and the refund/claim tests
+here are explicitly documented as accounting-only.
+
 ### Windows harness workaround
 
 `gltest`'s direct harness injects the message by `os.dup2`-ing a temp file onto
@@ -64,10 +75,12 @@ appeal authorization) — a real LLM verdict is non-reproducible and is therefor
 not pinned to an exact status. The suite is skipped by default
 (`RUN_INTEGRATION` guard): the shipped `gltest` has no studio-dev network
 profile and no fee-deposit flow, while studio-dev charges a non-zero fee on
-every transaction (`docs/deployment.md` finding 1). Consensus is instead
-proven on the real network by the accepted production deploy (leader + all
-validators executed with return) and by the bounded Phase 9 on-chain activity
-run through the CLI, which speaks the studio-dev fee model natively.
+every transaction (`docs/deployment.md` finding 1). Consensus is instead proven
+on the real network by the accepted production deploys (leader + all validators
+executed with return) and by the bounded Phase 9 on-chain activity, driven
+fee-aware through `genlayer-js@2.0.0-rc.1` (`estimateTransactionFees` →
+`writeContract({ value, fees })`) and recorded with transaction hashes and
+balance deltas in `docs/onchain-activity.md`.
 
 ### Why not GLSim locally
 
