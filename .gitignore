@@ -53,6 +53,9 @@ Thumbs.db
 /estimate.json
 /rec_*.txt
 /receipt_*.txt
+# browser-subagent capture scratch (root-level only); committed screenshots
+# live in docs/assets/ and stay tracked
+/*.png
 
 # --- Local, token-reading setup helpers (never commit) ---
 /gh_*.ps1
