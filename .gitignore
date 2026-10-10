@@ -55,6 +55,5 @@ Thumbs.db
 /receipt_*.txt
 
 # --- Local, token-reading setup helpers (never commit) ---
-/gh_setup.ps1
-/gh_push.ps1
+/gh_*.ps1
 /setup_*.ps1

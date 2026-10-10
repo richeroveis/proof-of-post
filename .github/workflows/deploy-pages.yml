@@ -38,7 +38,7 @@ jobs:
           # already deployed on a public dev chain. Base path is the Pages
           # subpath for the project page.
           NEXT_PUBLIC_BASE_PATH: /proof-of-post
-          NEXT_PUBLIC_CONTRACT_ADDRESS: 0xF8341A84a27aAADE1A5C80ADC43C3AeE2F119df4
+          NEXT_PUBLIC_CONTRACT_ADDRESS: "0xF8341A84a27aAADE1A5C80ADC43C3AeE2F119df4"
           NEXT_PUBLIC_GENLAYER_RPC: https://studio-dev.genlayer.com/api
         run: npm run build
       - uses: actions/configure-pages@v5
