@@ -219,9 +219,10 @@ export default function Dashboard() {
           as text — remote content is never fetched) with an explicit rule set and a GEN bond;
           GenLayer validators independently judge compliance and the contract settles the verdict
           on-chain — refunding the bond on COMPLIANT / INCONCLUSIVE and slashing it on
-          NON_COMPLIANT. Slashed bonds stay RESERVED while the verdict is still appealable, so a
-          winning appeal is always refundable; they become treasury-withdrawable only after the
-          appeal liability expires or is exhausted.
+          NON_COMPLIANT. Slashed bonds stay RESERVED and the verdict stays APPEALABLE while the
+          reservation holds; the liability is finalized only when the two-appeal budget runs out
+          or when a treasury withdrawal sweeps it after the minimum reservation window — counted
+          in lifecycle writes, not wall-clock time (the pinned runner has no timestamp API).
         </p>
         <div className="netline">
           <span>Network: <code>studio-dev</code> chainId <code>{STUDIO_DEV_CHAIN_ID}</code></span>
@@ -327,7 +328,7 @@ export default function Dashboard() {
                 {signer && e.status === "PENDING" && (
                   <button onClick={() => onCancel(Number(e.entry_id))} disabled={busy || !!pending}>Cancel (refund)</button>
                 )}
-                {signer && e.status === "NON_COMPLIANT" && (
+                {signer && e.status === "NON_COMPLIANT" && BigInt(e.appeal_deadline) > 0n && (
                   <button onClick={() => onAppeal(Number(e.entry_id))} disabled={busy || !!pending}>Appeal</button>
                 )}
               </span>
@@ -342,7 +343,7 @@ export default function Dashboard() {
           <div className="detail">
             <div className="small">Submitter {shortAddr(detail.submitter)} · Bond {formatEther(BigInt(detail.bond))} GEN · Appeals {detail.appeal_count}/2</div>
             {detail.status === "NON_COMPLIANT" && BigInt(detail.appeal_deadline) > 0n && (
-              <div className="small">Appeal window: finalized at write #{detail.appeal_deadline} (current write #{detail.tick}) — the bond stays reserved until then.</div>
+              <div className="small">Appeal liability: reserved (treasury sweep possible only after write #{detail.appeal_deadline}, current write #{detail.tick}) — the verdict stays appealable while the bond remains reserved.</div>
             )}
             <h3 style={{ marginBottom: 4 }}>{detail.title}</h3>
             <div className="content-box">{detail.content}</div>

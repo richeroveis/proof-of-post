@@ -16,7 +16,9 @@ import json
 #   COMPLIANT    -> bond refunded to submitter, entry marked verified
 #   INCONCLUSIVE -> bond refunded to submitter, not marked verified
 #   NON_COMPLIANT-> bond slashed: RESERVED against appeal liability first, then
-#                  finalized for treasury withdrawal once the liability expires
+#                  finalized for treasury withdrawal only once that liability is
+#                  actually finalized (appeal budget exhausted, or a sweep
+#                  inside a completed withdrawal after the minimum window)
 #   CANCELLED    -> PENDING-only recovery path, bond refunded
 # The only non-deterministic operation is the compliance assessment, performed
 # with a comparative custom validator (independent re-derivation) via run_nondet.
@@ -30,9 +32,16 @@ import json
 # block-height API (verified against the runner std lib; see
 # docs/remediation-plan.md), so wall-clock windows are impossible on-chain.
 # The contract instead uses its own lifecycle clock: `tick` counts finalized
-# writes, an appeal window spans APPEAL_WINDOW_TICKS writes, and a stuck
-# PENDING bond is recovered through cancel_pending(), whose safety comes from
-# atomic finalization (evaluate and cancel serialize; the loser reverts with
+# writes, and after settlement a slashed bond stays RESERVED for at least
+# APPEAL_WINDOW_TICKS further writes before a treasury withdrawal may sweep
+# it. Audit fix (tick-window hardening): the right to APPEAL is not gated on
+# the tick itself - any account can burn ticks with cheap self-canceling
+# writes, which would let third-party spam silently deny legitimate appeals.
+# An entry stays appealable while its bond is still reserved, i.e. until the
+# liability is truly irreversible: the appeal-count cap, or a sweep that
+# actually ran inside a completed withdrawal. A stuck PENDING bond is
+# recovered through cancel_pending(), whose safety comes from atomic
+# finalization (evaluate and cancel serialize; the loser reverts with
 # [EXPECTED]) rather than from a timer.
 # =============================================================================
 
@@ -63,10 +72,11 @@ MAX_RULE_LEN = 300
 MAX_TITLE_LEN = 200
 MAX_REASON_LEN = 1000
 
-# Appeal window measured in this contract's finalized writes (see time model in
-# the header). A NON_COMPLIANT verdict stays appealable for this many further
-# settled writes; until then (and until the appeal count cap is reached) the
-# slashed bond is reserved and cannot be withdrawn by the treasury.
+# Minimum number of further settled writes a slashed bond stays reserved
+# before a treasury withdrawal may sweep it (see time model in the header).
+# It protects the appellant against an EAGER treasury; it no longer gates the
+# appeal itself - an entry remains appealable while appeal_deadline > 0, which
+# only becomes 0 when the liability is actually finalized (swept or exhausted).
 APPEAL_WINDOW_TICKS = 4
 
 _VALID_CS = [CS_SATISFIED, CS_VIOLATED, CS_UNVERIFIABLE]
@@ -103,7 +113,7 @@ class Entry:
     checks_json: str       # JSON list[{"rule","status"}]
     verdict_reason: str
     appeal_count: u256
-    appeal_deadline: u256  # tick at which appeal liability expires (0 = none)
+    appeal_deadline: u256  # earliest sweep tick (0 = liability finalized)
 
 
 # -----------------------------------------------------------------------------
@@ -376,8 +386,13 @@ class RuleRegistry(gl.Contract):
         """Submitter re-opens consensus on a NON_COMPLIANT verdict (bounded).
 
         Re-adjudicates the SAME stored content and rules - no new evidence is
-        accepted (reviewer F6). Bounded by MAX_APPEALS and by the appeal
-        window (APPEAL_WINDOW_TICKS finalized writes after settlement).
+        accepted (reviewer F6). Bounded by MAX_APPEALS and by the reservation
+        itself: while appeal_deadline > 0 the bond is still reserved and a
+        reversal is fundable, so the appeal stays available even if unrelated
+        writes have burned past the nominal window (audit: tick-window
+        shortening). Once the liability is finalized - exhausted appeals or a
+        sweep inside a completed withdrawal - reversal is no longer fundable
+        and the appeal is refused.
         """
         self.tick = u256(self.tick + 1)
         if entry_id not in self.entries:
@@ -390,8 +405,11 @@ class RuleRegistry(gl.Contract):
             raise gl.vm.UserError(ERROR_EXPECTED + " Only NON_COMPLIANT can be appealed")
         if entry.appeal_count >= u256(MAX_APPEALS):
             raise gl.vm.UserError(ERROR_EXPECTED + " Appeal limit reached")
-        if u256(self.tick) >= u256(entry.appeal_deadline):
-            raise gl.vm.UserError(ERROR_EXPECTED + " Appeal window expired")
+        if u256(entry.appeal_deadline) == u256(0):
+            # Reserved-liability gate: deadline 0 means the bond was already
+            # released to the treasury side (sweep or exhaustion), so a
+            # reversal could no longer be funded without double-paying.
+            raise gl.vm.UserError(ERROR_EXPECTED + " Appeal liability finalized")
 
         result = self._assess(entry.content, entry.rules_json)
         entry.appeal_count = u256(entry.appeal_count + 1)
@@ -454,11 +472,12 @@ class RuleRegistry(gl.Contract):
         """Owner withdraws FINALIZED slashed collateral to the treasury.
 
         Reviewer F1/F5: the destination is always the configured treasury
-        (there is no free `to` parameter), and collateral whose appeal window
-        has not expired - or whose appeal budget is not exhausted - stays
-        reserved and cannot be withdrawn, so a winning appeal is always
-        refundable. Expired reservations are swept atomically inside this
-        write before the availability check.
+        (there is no free `to` parameter), and collateral whose reservation has
+        not been finalized - minimum window unelapsed, appeal budget not
+        exhausted - stays reserved and cannot be withdrawn, so a winning
+        appeal is always refundable. Expired reservations are swept atomically
+        inside this write before the availability check; the sweep is the only
+        path that ends an appeal right without the submitter using it.
         """
         self.tick = u256(self.tick + 1)
         if gl.message.sender_address != self.owner:

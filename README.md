@@ -9,8 +9,9 @@ settles a normalized, appealable verdict that drives a real bonded payout
 (COMPLIANT → registered + bond kept, NON_COMPLIANT → bond slashed but **reserved
 against the appeal window**, INCONCLUSIVE → held/refundable; a stuck PENDING
 entry is recoverable by the submitter via `cancel_pending`). Slashed collateral
-becomes treasury-withdrawable only after its appeal liability expires or is
-exhausted, so a winning appeal is always refundable.
+becomes treasury-withdrawable only after its appeal liability is finalized
+(the minimum window elapsed and a withdrawal swept it, or the appeal budget
+was exhausted), so a winning appeal is always refundable.
 
 This repository also ships **two standalone, independently-reviewable Intelligent
 Contracts** (`standalone/`) that are *not* part of the main project and stand on
@@ -63,8 +64,13 @@ silently never delivered to an EOA). See `docs/deployment.md` finding 6.
 **Time model.** The pinned GenVM runner (v0.2.16) exposes no timestamp or
 block-height API, so appeal windows and PENDING recovery are expressed on the
 contract's own lifecycle clock: `tick` counts finalized writes, a NON_COMPLIANT
-bond stays reserved for `APPEAL_WINDOW_TICKS` (4) further settled writes, and
-expired reservations are swept inside the withdrawal write itself. A stuck
+bond stays reserved for at least `APPEAL_WINDOW_TICKS` (4) further settled
+writes before a withdrawal may sweep it, and expired reservations are swept
+inside the withdrawal write itself. The **right to appeal** is gated on the
+reservation, not the counter: anyone could burn ticks with cheap self-canceling
+writes, so an entry stays appealable while its bond is still reserved and only
+loses that right when the liability is truly finalized (appeal cap exhausted,
+or a sweep inside a completed, paying withdrawal). A stuck
 PENDING bond is recovered with `cancel_pending()` — safe without a timer because
 `evaluate` and `cancel` serialize through atomic finalization (the loser reverts
 with `[EXPECTED] Entry not pending`). See `docs/remediation-plan.md`.
@@ -116,7 +122,7 @@ genvm-lint check contracts/rule_registry.py
 genvm-lint check standalone/evidence-oracle/contract.py
 genvm-lint check standalone/score-registry/contract.py
 
-# fast direct mode tests (mocked web/LLM, no network) — 36 + 54 pass
+# fast direct mode tests (mocked web/LLM, no network) — 41 + 54 pass
 pytest tests/direct -q
 pytest standalone/evidence-oracle/tests/direct standalone/score-registry/tests/direct -q
 
@@ -153,8 +159,13 @@ decides whether a bond is refunded or slashed.
 
 - `studio-dev` is temporary and resets; deployments are ephemeral and must be
   re-deployed/re-configured (see `docs/deployment.md`).
-- Appeal windows are measured in finalized contract writes, not wall-clock time
-  (the pinned runner has no clock API — see `docs/remediation-plan.md`); a quiet
+- The nominal appeal window (`APPEAL_WINDOW_TICKS`) is measured in lifecycle
+  writes, not wall-clock time (the pinned runner exposes no timestamp/block API)
+  and now bounds only when a treasury withdrawal MAY sweep the reservation; the
+  right to appeal continues past that tick until the liability is actually
+  finalized — a completed paying withdrawal or the two-appeal budget being
+  exhausted. This is a deliberate protocol-semantic change (see
+  `docs/remediation-plan.md`, F7) and needs reviewer sign-off; a quiet
   registry therefore keeps collateral reserved longer in real time, which is the
   conservative direction for submitters.
 - Whether a verdict is *reversible* on appeal is up to the validator ensemble:

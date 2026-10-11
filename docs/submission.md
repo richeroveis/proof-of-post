@@ -35,7 +35,8 @@ fabricated** — each is a real artifact of this build.
 against a natural-language rule set and a validator ensemble independently
 re-derives whether each post satisfies the rules, settling a reproducible,
 appealable verdict that gates a bonded payout — slashed collateral stays
-reserved against the appeal window until the liability expires or is exhausted.
+reserved against the appeal window until the liability is finalized (swept in a
+completed withdrawal after the minimum window, or appeal budget exhausted).
 
 **Problem & target users:** Creators, communities, and bounty platforms need
 content to be checked against subjective written rules (format, required
@@ -58,7 +59,7 @@ browser-verified reads against the deployed contract)
 
 **Setup & test instructions:** see repo `README` / `docs/testing.md` —
 `genvm-lint check contracts/rule_registry.py`; `pytest tests/direct -q`
-(36 direct tests); guarded integration suite via `gltest`; full live
+(41 direct tests); guarded integration suite via `gltest`; full live
 regression `node e2e/studio_devnet_e2e.mjs`.
 **Architecture docs:** `docs/research.md`, `docs/project-decision.md`,
 `docs/deployment.md`, `docs/onchain-activity.md`,
@@ -148,7 +149,7 @@ judgment by design.
 | RuleRegistry (superseded) | 0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b | pre-remediation instance |
 | EvidenceOracle | 0xc315465D70D377CDB078aB0117C011d46A288E1F | FINALIZED, get_stats/get_min_bond read OK |
 | ScoreRegistry | 0x2579a22a567a6A9D424Fa6225c201aD359bd8d66 | FINALIZED, get_stats/list_items read OK |
-| Direct tests | 36 (main) + 54 (standalone) | all pass |
+| Direct tests | 41 (main) + 54 (standalone) | all pass |
 | Lint | both standalone + main | genvm-lint check PASS |
 
 ## Outstanding before submission
@@ -156,3 +157,9 @@ judgment by design.
 1. Human in-browser confirmation of the live Builder point ranges / field schema
    (portal is a JS SPA — not scrapable from the agent).
 2. Human approval to perform the **irreversible** portal submission (not done here).
+3. **Reviewer sign-off on the F7 appeal-semantics change**: appealability is no
+   longer time-boxed by the lifecycle tick — it continues past the nominal
+   sweep-eligibility window until the liability is finalized by a completed
+   paying treasury withdrawal or the two-appeal budget (verified locally only;
+   the deployed `0x405e…b594` still runs the counter-gated appeal until
+   redeployed). See `docs/remediation-plan.md` F7.

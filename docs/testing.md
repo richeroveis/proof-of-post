@@ -20,10 +20,10 @@ finding 4), so we keep the pinned runner and re-evaluate before submission.
 ## 2. Behavioral tests — direct mode
 
 ```
-python -m pytest tests/direct/        # 36 tests, ~2s, no server
+python -m pytest tests/direct/        # 41 tests, ~2s, no server
 ```
 
-Result: **36 passed**. Runs the real contract code in-process and exercises the
+Result: **41 passed**. Runs the real contract code in-process and exercises the
 leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
 - Deploy / initial accounting (`get_stats`), lifecycle `tick`.
@@ -34,13 +34,28 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
   INCONCLUSIVE (no slash/verify), malformed-LLM → `[LLM_ERROR]` revert,
   double-evaluate revert, unauthorized caller revert.
 - Appeal: flip NON_COMPLIANT→COMPLIANT (un-reserve + un-slash + verify),
-  submitter-only, requires-NON_COMPLIANT, appeal-count cap (2), **expired
-  appeal window** revert.
+  submitter-only, requires-NON_COMPLIANT, appeal-count cap (2), and refusal
+  once the liability is actually finalized (`Appeal liability finalized`).
+- Tick-window hardening (security audit F7): four cheap submit+cancel writes
+  from an unrelated account burn the entire nominal `APPEAL_WINDOW_TICKS`
+  window - reproduced as an appeal denial against the old counter-gated
+  appeal, and now pinned as `test_spam_cannot_deny_legitimate_appeal` (appeal
+  still succeeds while the bond is reserved) plus
+  `test_appeal_refused_after_withdraw_sweeps_reservation` (appeal refused only
+  after the sweep made the liability irreversible). Second-pass adversarial
+  gaps now pinned too: `test_post_deadline_upheld_appeals_exhaust_and_release_once`
+  (upheld appeals after the deadline release exactly once, then a real paying
+  `deal()`-funded withdrawal succeeds), `test_post_deadline_appeal_inconclusive_refunds_without_verify`
+  (INCONCLUSIVE flip: release + un-slash + refund, no verified credit), and
+  `test_mixed_window_sweep_finalizes_only_elapsed_reservations` (two different
+  deadlines: the paying sweep finalizes only the elapsed entry; the younger
+  reservation stays reserved and appealable; treasury got only the eligible share).
 - Reservation invariants (the `_assert_ledger` helper checks I1-I4 after every
   transition): premature `withdraw_slashed` inside the appeal window reverts
   with the explicit reserved-collateral error; two upheld appeals finalize the
-  liability; window expiry sweeps to available inside the withdraw write;
-  multiple slashed entries reserve additively; zero/over-cap withdraws revert.
+  liability; window expiry sweeps to available inside the withdraw write (only
+  *after* the minimum window - the sweep timing gate is unchanged); multiple
+  slashed entries reserve additively; zero/over-cap withdraws revert.
 - PENDING recovery: `cancel_pending` refunds and sets terminal CANCELLED;
   unauthorized cancel, cancel-after-verdict, double cancel and **late evaluate
   after cancel** all revert deterministically.
