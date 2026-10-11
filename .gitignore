@@ -67,3 +67,9 @@ Thumbs.db
 /demo/build/
 /demo/capture/video/
 /demo/capture/shots/
+
+# --- E2E run console captures (canonical record is e2e/evidence*.json) ---
+/e2e/*.log
+
+# symlink for running e2e scripts against the frontend SDK
+/e2e/node_modules

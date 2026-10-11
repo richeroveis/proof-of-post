@@ -58,7 +58,8 @@ def test_submit_records_pending_entry():
 
     stats = contract.get_stats(args=[]).call()
     assert int(stats["total"]) == 1
-    entry = contract.get_entry(args=[1]).call()
+    # Entry ids are 0-based (next_id starts at 0).
+    entry = contract.get_entry(args=[0]).call()
     assert entry["status"] == "PENDING"
 
 
@@ -76,13 +77,39 @@ def test_evaluate_twice_reverts():
     tx = contract.submit(args=["t", "Some english content.", RULES_BLOB], value=MIN_BOND).transact()
     assert tx_execution_succeeded(tx)
 
-    first = contract.evaluate(args=[1]).transact()
+    first = contract.evaluate(args=[0]).transact()
     assert tx_execution_succeeded(first)
-    status = contract.get_entry(args=[1]).call()["status"]
+    status = contract.get_entry(args=[0]).call()["status"]
     assert status in TERMINAL
 
-    second = contract.evaluate(args=[1]).transact()
+    second = contract.evaluate(args=[0]).transact()
     assert not tx_execution_succeeded(second)
+
+
+def test_cancel_pending_then_late_evaluate_reverts():
+    """Reviewer F2 recovery path: a PENDING bond can be cancelled (deterministic,
+    no LLM), and the cancelled entry can then never be evaluated - the bond is
+    settled exactly once."""
+    contract = _deploy()
+    tx = contract.submit(args=["t", "content", RULES_BLOB], value=MIN_BOND).transact()
+    assert tx_execution_succeeded(tx)
+
+    cancel = contract.cancel_pending(args=[0]).transact()
+    assert tx_execution_succeeded(cancel)
+    assert contract.get_entry(args=[0]).call()["status"] == "CANCELLED"
+
+    late = contract.evaluate(args=[0]).transact()
+    assert not tx_execution_succeeded(late)
+
+
+def test_oversized_rules_revert():
+    """Reviewer F3: oversized rule sets revert deterministically; nothing is
+    stored and nothing is silently truncated."""
+    contract = _deploy()
+    blob31 = "\n".join(f"Rule number {i}" for i in range(31))
+    tx = contract.submit(args=["t", "content", blob31], value=MIN_BOND).transact()
+    assert not tx_execution_succeeded(tx)
+    assert int(contract.get_stats(args=[]).call()["total"]) == 0
 
 
 def test_appeal_only_by_non_submitter_reverts():
@@ -91,5 +118,5 @@ def test_appeal_only_by_non_submitter_reverts():
     assert tx_execution_succeeded(tx)
     # A fresh random account (default deployer == submitter here) cannot appeal an
     # entry that is still PENDING; appeal requires NON_COMPLIANT and the submitter.
-    pending = contract.appeal(args=[1]).transact()
+    pending = contract.appeal(args=[0]).transact()
     assert not tx_execution_succeeded(pending)

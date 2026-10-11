@@ -1,12 +1,16 @@
 # ProofOfPost — on-chain content-rule adjudication on GenLayer
 
 **ProofOfPost** is a stake-backed content-compliance registry built as a GenLayer
-**Intelligent Contract**. A submitter posts content (or a URL) together with an
-explicit natural-language rule set and a bond; a GenLayer validator ensemble
+**Intelligent Contract**. A submitter posts literal text (URLs are judged as
+text — remote content is never fetched) together with an explicit
+natural-language rule set and a bond; a GenLayer validator ensemble
 **independently re-derives** whether the content satisfies the rules; the contract
 settles a normalized, appealable verdict that drives a real bonded payout
-(COMPLIANT → registered + bond kept, NON_COMPLIANT → slashed, INCONCLUSIVE →
-held/refundable).
+(COMPLIANT → registered + bond kept, NON_COMPLIANT → bond slashed but **reserved
+against the appeal window**, INCONCLUSIVE → held/refundable; a stuck PENDING
+entry is recoverable by the submitter via `cancel_pending`). Slashed collateral
+becomes treasury-withdrawable only after its appeal liability expires or is
+exhausted, so a winning appeal is always refundable.
 
 This repository also ships **two standalone, independently-reviewable Intelligent
 Contracts** (`standalone/`) that are *not* part of the main project and stand on
@@ -17,9 +21,15 @@ their own as reusable GenLayer primitives.
 | Live demo | https://richeroveis.github.io/proof-of-post |
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
-| Main contract `RuleRegistry` | `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b` |
+| Main contract `RuleRegistry` (remediated) | `0x405e957542856E5f6830EDD40757480BDA8ab594` |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
+
+The remediation of the reviewer findings (slashed-collateral reservation,
+PENDING recovery, strict rule-size limits, treasury routing) is documented in
+[`docs/remediation-plan.md`](docs/remediation-plan.md) with the exact
+regression tests and live transaction evidence in
+[`docs/onchain-activity.md`](docs/onchain-activity.md).
 
 ---
 
@@ -49,6 +59,21 @@ contract here uses **Optimistic Democracy consensus** with an explicit
 Money is handled as atto-scale `u256` (never `float`); payouts to EOAs use an
 **external EVM message** (an internal `get_contract_at().emit_transfer` is
 silently never delivered to an EOA). See `docs/deployment.md` finding 6.
+
+**Time model.** The pinned GenVM runner (v0.2.16) exposes no timestamp or
+block-height API, so appeal windows and PENDING recovery are expressed on the
+contract's own lifecycle clock: `tick` counts finalized writes, a NON_COMPLIANT
+bond stays reserved for `APPEAL_WINDOW_TICKS` (4) further settled writes, and
+expired reservations are swept inside the withdrawal write itself. A stuck
+PENDING bond is recovered with `cancel_pending()` — safe without a timer because
+`evaluate` and `cancel` serialize through atomic finalization (the loser reverts
+with `[EXPECTED] Entry not pending`). See `docs/remediation-plan.md`.
+
+**Limits are enforced by rejection, never truncation**: ≤ 30 rules × 300 chars,
+title ≤ 200, content ≤ 8000 — the rules the validators judge are exactly the
+rules the submitter stored. `withdraw_slashed(amount)` pays only to the
+configured treasury. An appeal re-runs the same assessment on the same stored
+evidence; no new evidence can be attached.
 
 ## Repository layout
 
@@ -91,7 +116,7 @@ genvm-lint check contracts/rule_registry.py
 genvm-lint check standalone/evidence-oracle/contract.py
 genvm-lint check standalone/score-registry/contract.py
 
-# fast direct-mode tests (mocked web/LLM, no network) — 22 + 54 pass
+# fast direct mode tests (mocked web/LLM, no network) — 36 + 54 pass
 pytest tests/direct -q
 pytest standalone/evidence-oracle/tests/direct standalone/score-registry/tests/direct -q
 
@@ -109,6 +134,7 @@ decides whether a bond is refunded or slashed.
 
 ## Documentation
 
+- [`docs/remediation-plan.md`](docs/remediation-plan.md) — reviewer findings → fixes → regression tests
 - [`docs/research.md`](docs/research.md) — campaign/network/tooling research
 - [`docs/project-decision.md`](docs/project-decision.md) — approved scope & consensus design
 - [`docs/deployment.md`](docs/deployment.md) — studio-dev operational findings (fees, runner header, EOA payouts)
@@ -127,6 +153,13 @@ decides whether a bond is refunded or slashed.
 
 - `studio-dev` is temporary and resets; deployments are ephemeral and must be
   re-deployed/re-configured (see `docs/deployment.md`).
+- Appeal windows are measured in finalized contract writes, not wall-clock time
+  (the pinned runner has no clock API — see `docs/remediation-plan.md`); a quiet
+  registry therefore keeps collateral reserved longer in real time, which is the
+  conservative direction for submitters.
+- Whether a verdict is *reversible* on appeal is up to the validator ensemble:
+  the reversal/refund path is proven deterministic in direct tests and live
+  `e2e/` runs, but an individual LLM flip cannot be forced on command.
 - Consensus on `evaluate`/`resolve`/`grade`-type writes depends on the shared
   validator set being available and converging; constructors and views are
   deterministic and were verified live on studio-dev.

@@ -16,11 +16,33 @@ import {
   writeSubmit,
   writeEvaluate,
   writeAppeal,
+  writeCancel,
   type Stats,
   type EntrySummary,
   type EntryDetail,
 } from "@/lib/contract";
 import { STUDIO_DEV_CHAIN_ID } from "@/lib/chain";
+
+// Client-side mirrors of the contract's hard limits (contracts/rule_registry.py).
+// The contract REJECTS oversized input - it never truncates - so the form must
+// surface the same constraints before paying a fee for a doomed transaction.
+const MAX_TITLE_LEN = 200;
+const MAX_CONTENT_LEN = 8000;
+const MAX_RULES = 30;
+const MAX_RULE_LEN = 300;
+
+function validateSubmission(title: string, content: string, rulesBlob: string): string | null {
+  if (title.length > MAX_TITLE_LEN) return `Title exceeds ${MAX_TITLE_LEN} characters (contract rejects, never truncates).`;
+  const clean = content.trim();
+  if (clean.length === 0) return "Content is empty.";
+  if (clean.length > MAX_CONTENT_LEN) return `Content exceeds ${MAX_CONTENT_LEN} characters.`;
+  const rules = rulesBlob.split("\n").map((r) => r.trim()).filter((r) => r.length > 0);
+  if (rules.length === 0) return "No rules provided.";
+  if (rules.length > MAX_RULES) return `Too many rules: ${rules.length} > ${MAX_RULES} (contract rejects, never truncates).`;
+  const tooLong = rules.findIndex((r) => r.length > MAX_RULE_LEN);
+  if (tooLong >= 0) return `Rule ${tooLong + 1} exceeds ${MAX_RULE_LEN} characters.`;
+  return null;
+}
 
 function shortAddr(a?: string) {
   if (!a) return "—";
@@ -130,6 +152,8 @@ export default function Dashboard() {
 
   async function onSubmit() {
     if (!signer) { setError("Connect a signer first."); return; }
+    const invalid = validateSubmission(title, content, rulesBlob);
+    if (invalid) { setError(invalid); return; }
     setBusy(true);
     setError(null);
     setFlash(null);
@@ -171,6 +195,19 @@ export default function Dashboard() {
     }
   }
 
+  async function onCancel(id: number) {
+    if (!signer) { setError("Connect a signer first."); return; }
+    setBusy(true); setError(null); setFlash(null);
+    try {
+      await runWrite(`cancel #${id}`, () => writeCancel(signer as any, id));
+    } catch (err: any) {
+      setPending(null);
+      setError(String(err?.shortMessage || err?.message || err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const notDeployed = !CONTRACT_ADDRESS;
 
   return (
@@ -178,10 +215,13 @@ export default function Dashboard() {
       <header className="hero">
         <h1>ProofOfPost · RuleRegistry</h1>
         <p>
-          A stake-backed content-compliance registry. Submitters post content with an explicit
-          rule set and a GEN bond; GenLayer validators independently judge compliance and the
-          contract settles the verdict on-chain — refunding the bond on COMPLIANT / INCONCLUSIVE
-          and slashing it on NON_COMPLIANT.
+          A stake-backed content-compliance registry. Submitters post LITERAL TEXT (URLs are judged
+          as text — remote content is never fetched) with an explicit rule set and a GEN bond;
+          GenLayer validators independently judge compliance and the contract settles the verdict
+          on-chain — refunding the bond on COMPLIANT / INCONCLUSIVE and slashing it on
+          NON_COMPLIANT. Slashed bonds stay RESERVED while the verdict is still appealable, so a
+          winning appeal is always refundable; they become treasury-withdrawable only after the
+          appeal liability expires or is exhausted.
         </p>
         <div className="netline">
           <span>Network: <code>studio-dev</code> chainId <code>{STUDIO_DEV_CHAIN_ID}</code></span>
@@ -207,8 +247,12 @@ export default function Dashboard() {
           <div className="card"><div className="label">Verified</div><div className="value">{stats?.verified ?? "—"}</div></div>
           <div className="card"><div className="label">Min bond (GEN)</div><div className="value">{stats ? minBond : "—"}</div></div>
           <div className="card"><div className="label">Slashed (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.slashed_total)) : "—"}</div></div>
+          <div className="card"><div className="label">Reserved (appealable)</div><div className="value">{stats ? formatEther(BigInt(stats.reserved_slashed)) : "—"}</div></div>
+          <div className="card"><div className="label">Treasury-available</div><div className="value">{stats ? formatEther(BigInt(stats.available_slashed)) : "—"}</div></div>
           <div className="card"><div className="label">Contract balance (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.contract_balance)) : "—"}</div></div>
           <div className="card"><div className="label">Owner</div><div className="value" style={{ fontSize: 14 }}>{shortAddr(stats?.owner)}</div></div>
+          <div className="card"><div className="label">Treasury</div><div className="value" style={{ fontSize: 14 }}>{shortAddr(stats?.treasury)}</div></div>
+          <div className="card"><div className="label">Lifecycle tick</div><div className="value">{stats?.tick ?? "—"}</div></div>
         </div>
         <div className="actions" style={{ marginTop: 12 }}>
           <button onClick={refresh} disabled={loading || notDeployed}>{loading ? "Refreshing…" : "Refresh"}</button>
@@ -243,13 +287,13 @@ export default function Dashboard() {
             )}
           </div>
 
-          <label>Title</label>
+          <label>Title (max {MAX_TITLE_LEN} chars — rejected, never truncated)</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title (max 200)" />
 
-          <label>Content</label>
+          <label>Content — literal text only (URLs are judged as text; nothing is fetched)</label>
           <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="The post to be judged (max 8000 chars)" />
 
-          <label>Rules (one per line, natural language)</label>
+          <label>Rules (one per line, natural language; max {MAX_RULES} × {MAX_RULE_LEN} chars)</label>
           <textarea value={rulesBlob} onChange={(e) => setRulesBlob(e.target.value)} placeholder={"Must mention GenLayer\nMust be under 50 words\nMust contain a hashtag"} />
 
           <label>Bond (GEN, ≥ min bond)</label>
@@ -280,6 +324,9 @@ export default function Dashboard() {
                 {signer && e.status === "PENDING" && (
                   <button onClick={() => onEvaluate(Number(e.entry_id))} disabled={busy || !!pending}>Evaluate</button>
                 )}
+                {signer && e.status === "PENDING" && (
+                  <button onClick={() => onCancel(Number(e.entry_id))} disabled={busy || !!pending}>Cancel (refund)</button>
+                )}
                 {signer && e.status === "NON_COMPLIANT" && (
                   <button onClick={() => onAppeal(Number(e.entry_id))} disabled={busy || !!pending}>Appeal</button>
                 )}
@@ -293,7 +340,10 @@ export default function Dashboard() {
         <section>
           <h2>Entry #{detail.entry_id} <Badge status={detail.status} /></h2>
           <div className="detail">
-            <div className="small">Submitter {shortAddr(detail.submitter)} · Bond {formatEther(BigInt(detail.bond))} GEN · Appeals {detail.appeal_count}</div>
+            <div className="small">Submitter {shortAddr(detail.submitter)} · Bond {formatEther(BigInt(detail.bond))} GEN · Appeals {detail.appeal_count}/2</div>
+            {detail.status === "NON_COMPLIANT" && BigInt(detail.appeal_deadline) > 0n && (
+              <div className="small">Appeal window: finalized at write #{detail.appeal_deadline} (current write #{detail.tick}) — the bond stays reserved until then.</div>
+            )}
             <h3 style={{ marginBottom: 4 }}>{detail.title}</h3>
             <div className="content-box">{detail.content}</div>
             <div className="label small">Rules & verdicts</div>
@@ -314,7 +364,8 @@ export default function Dashboard() {
         <p>
           Verdicts are produced by GenLayer validator consensus (<code>run_nondet</code> with an
           independent comparative re-derivation), not by this UI. This frontend is read/write access to
-          an intelligent contract; it does not decide outcomes.
+          an intelligent contract; it does not decide outcomes. An appeal re-runs the SAME assessment
+          on the SAME stored content and rules — no new evidence can be attached.
         </p>
       </footer>
     </div>

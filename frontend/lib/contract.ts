@@ -29,6 +29,7 @@ export type EntrySummary = {
   status: string;
   bond: string;
   appeal_count: string;
+  appeal_deadline: string;
 };
 
 export type RuleCheck = { rule: string; status: string };
@@ -44,6 +45,8 @@ export type EntryDetail = {
   checks: RuleCheck[];
   verdict_reason: string;
   appeal_count: string;
+  appeal_deadline: string;
+  tick: string;
 };
 
 export type Stats = {
@@ -52,6 +55,10 @@ export type Stats = {
   min_bond: string;
   slashed_total: string;
   withdrawn_slashed: string;
+  reserved_slashed: string;
+  available_slashed: string;
+  bonded_pending: string;
+  tick: string;
   contract_balance: string;
   owner: string;
   treasury: string;
@@ -190,6 +197,21 @@ export async function writeAppeal(account: Signer, entryId: number): Promise<any
   return client.writeContract({
     address: CONTRACT_ADDRESS as any,
     functionName: "appeal",
+    args: [BigInt(entryId)],
+    value: BigInt(0),
+    fees: { distribution: est.distribution, feeValue: est.feeValue },
+  });
+}
+
+// Recover the bond of a submission that never reached a verdict (contract's
+// cancel_pending): only a PENDING entry cancels, and CANCELLED is terminal -
+// a late evaluate reverts deterministically on-chain.
+export async function writeCancel(account: Signer, entryId: number): Promise<any> {
+  const client = makeWriteClient(account);
+  const est = await client.estimateTransactionFees();
+  return client.writeContract({
+    address: CONTRACT_ADDRESS as any,
+    functionName: "cancel_pending",
     args: [BigInt(entryId)],
     value: BigInt(0),
     fees: { distribution: est.distribution, feeValue: est.feeValue },

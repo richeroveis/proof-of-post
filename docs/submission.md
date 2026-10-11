@@ -1,9 +1,12 @@
 # Submission Preparation — GenLayer Builder Campaign (Phase 11)
 
-Prepared: 2026-10-10. Everything here is **verified against the local repo, the
-live studio-dev chain, and the official docs**. Fields that could **not** be
-independently confirmed are flagged. **No campaign points, addresses, tx hashes,
-or test results below are fabricated** — each is a real artifact of this build.
+Prepared: 2026-10-10, revised 2026-10-11 after the reviewer remediation
+(zoefunds): the live contract was replaced by a financially safer instance;
+see `docs/remediation-plan.md` and `docs/onchain-activity.md`. Everything here
+is **verified against the local repo, the live studio-dev chain, and the
+official docs**. Fields that could **not** be independently confirmed are
+flagged. **No campaign points, addresses, tx hashes, or test results below are
+fabricated** — each is a real artifact of this build.
 
 ## Rules re-verification status (important)
 
@@ -28,10 +31,11 @@ or test results below are fabricated** — each is a real artifact of this build
 
 **Title:** ProofOfPost — on-chain content-rule adjudication with GenLayer
 
-**Description:** A public registry where posts are submitted against a natural-
-language rule set and a validator ensemble independently re-derives whether each
-post satisfies the rules, settling a reproducible, appealable verdict that gates
-a bonded payout.
+**Description:** A public registry where posts of literal text are submitted
+against a natural-language rule set and a validator ensemble independently
+re-derives whether each post satisfies the rules, settling a reproducible,
+appealable verdict that gates a bonded payout — slashed collateral stays
+reserved against the appeal window until the liability expires or is exhausted.
 
 **Problem & target users:** Creators, communities, and bounty platforms need
 content to be checked against subjective written rules (format, required
@@ -48,17 +52,22 @@ validator for consensus on failure paths.
 **Live demo:** https://richeroveis.github.io/proof-of-post (GitHub Pages,
 browser-verified reads against the deployed contract)
 **Deployed contract (studio-dev, chainId 61997):**
-`0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b`
+`0x405e957542856E5f6830EDD40757480BDA8ab594` (remediated instance; supersedes
+`0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b`)
 **Network:** GenLayer Studio Devnet — RPC `https://studio-dev.genlayer.com/api` (non-gasless; fee ~0.00008 GEN per settled tx after refund)
 
 **Setup & test instructions:** see repo `README` / `docs/testing.md` —
 `genvm-lint check contracts/rule_registry.py`; `pytest tests/direct -q`
-(22 direct tests); guarded integration suite via `gltest`.
+(36 direct tests); guarded integration suite via `gltest`; full live
+regression `node e2e/studio_devnet_e2e.mjs`.
 **Architecture docs:** `docs/research.md`, `docs/project-decision.md`,
-`docs/deployment.md`, `docs/onchain-activity.md`.
+`docs/deployment.md`, `docs/onchain-activity.md`,
+`docs/remediation-plan.md`.
 **Evidence of real functionality:** live reads verified in-browser on the Pages
-demo; bounded Phase 9 on-chain regression settled real verdicts **and** moved
-real GEN (external-message payouts) on studio-dev.
+demo; the 2026-10-11 remediation regression settled real verdicts, rejected a
+premature treasury withdrawal on-chain, refunded a cancelled bond, and moved
+1 GEN of finalized slashed collateral to the configured treasury (hashes in
+`docs/onchain-activity.md`).
 
 ---
 
@@ -133,12 +142,13 @@ judgment by design.
 
 | Item | Value | Status |
 |---|---|---|
-| Repo | github.com/richeroveis/proof-of-post | pushed (`main` @ ced23c1) |
+| Repo | github.com/richeroveis/proof-of-post | pushed (`main`) |
 | Project demo | richeroveis.github.io/proof-of-post | live, browser-verified |
-| RuleRegistry | 0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b | live on studio-dev |
+| RuleRegistry (remediated) | 0x405e957542856E5f6830EDD40757480BDA8ab594 | live on studio-dev, full E2E regression |
+| RuleRegistry (superseded) | 0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b | pre-remediation instance |
 | EvidenceOracle | 0xc315465D70D377CDB078aB0117C011d46A288E1F | FINALIZED, get_stats/get_min_bond read OK |
 | ScoreRegistry | 0x2579a22a567a6A9D424Fa6225c201aD359bd8d66 | FINALIZED, get_stats/list_items read OK |
-| Direct tests | 22 (main) + 54 (standalone) | all pass |
+| Direct tests | 36 (main) + 54 (standalone) | all pass |
 | Lint | both standalone + main | genvm-lint check PASS |
 
 ## Outstanding before submission

@@ -20,20 +20,30 @@ finding 4), so we keep the pinned runner and re-evaluate before submission.
 ## 2. Behavioral tests — direct mode
 
 ```
-python -m pytest tests/direct/        # 22 tests, ~2s, no server
+python -m pytest tests/direct/        # 36 tests, ~2s, no server
 ```
 
-Result: **22 passed**. Runs the real contract code in-process and exercises the
+Result: **36 passed**. Runs the real contract code in-process and exercises the
 leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
-- Deploy / initial accounting (`get_stats`).
-- Bond gate, empty-content and no-rules reverts.
+- Deploy / initial accounting (`get_stats`), lifecycle `tick`.
+- Bond gate, empty-content, no-rules, oversized-title/rules reverts (limits are
+  rejected, never truncated - boundary tests at exactly-max and max+1).
 - Entry creation as `PENDING`; missing-entry view returns `{}`.
-- `evaluate`: COMPLIANT (refund + verify), NON_COMPLIANT (slash), INCONCLUSIVE
-  (no slash/verify), malformed-LLM → `[LLM_ERROR]` revert, double-evaluate revert,
-  unauthorized caller revert.
-- Appeal: flip NON_COMPLIANT→COMPLIANT (un-slash + verify), submitter-only,
-  requires-NON_COMPLIANT, appeal-count cap (2).
+- `evaluate`: COMPLIANT (refund + verify), NON_COMPLIANT (slash + **reserve**),
+  INCONCLUSIVE (no slash/verify), malformed-LLM → `[LLM_ERROR]` revert,
+  double-evaluate revert, unauthorized caller revert.
+- Appeal: flip NON_COMPLIANT→COMPLIANT (un-reserve + un-slash + verify),
+  submitter-only, requires-NON_COMPLIANT, appeal-count cap (2), **expired
+  appeal window** revert.
+- Reservation invariants (the `_assert_ledger` helper checks I1-I4 after every
+  transition): premature `withdraw_slashed` inside the appeal window reverts
+  with the explicit reserved-collateral error; two upheld appeals finalize the
+  liability; window expiry sweeps to available inside the withdraw write;
+  multiple slashed entries reserve additively; zero/over-cap withdraws revert.
+- PENDING recovery: `cancel_pending` refunds and sets terminal CANCELLED;
+  unauthorized cancel, cancel-after-verdict, double cancel and **late evaluate
+  after cancel** all revert deterministically.
 - Treasury withdrawal: owner-only, insufficient-balance guard.
 - List pagination.
 - Validator: agrees on independent re-derivation, disagrees on a mismatched
@@ -43,12 +53,15 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
 Direct mode does not model native GEN transfers: `emit_transfer` is a no-op, so
 these tests assert the contract's internal ledger (`verified_count`,
-`slashed_total`, `withdrawn_slashed`) and never a recipient's balance. That
-boundary cost us a real bug — the first deployed version paid bonds out with an
-internal IC→IC message, which an EOA can never receive, and **all 22 direct
-tests still passed**. Payout delivery is therefore covered by the live
-settlement regression in `docs/onchain-activity.md`, and the refund/claim tests
-here are explicitly documented as accounting-only.
+`slashed_total`, `reserved_slashed`, `withdrawn_slashed`, `bonded_pending`) and
+never a recipient's balance. Direct mode also does not roll back mid-write state
+on a revert (on-chain finalization does) - the window-expiry test documents that
+harness difference explicitly. That boundary cost us a real bug once — the first
+deployed version paid bonds out with an internal IC→IC message, which an EOA can
+never receive, and **all 22 direct tests then passing** proved nothing about
+delivery. Payout delivery is therefore covered by the live settlement regression
+in `docs/onchain-activity.md`, and the refund/claim tests here are explicitly
+documented as accounting-only.
 
 ### Windows harness workaround
 

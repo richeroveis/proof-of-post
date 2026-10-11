@@ -38,7 +38,10 @@ jobs:
           # already deployed on a public dev chain. Base path is the Pages
           # subpath for the project page.
           NEXT_PUBLIC_BASE_PATH: /proof-of-post
-          NEXT_PUBLIC_CONTRACT_ADDRESS: "0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b"
+          # Remediated RuleRegistry instance (2026-10-11), verified end-to-end
+          # on studio-dev via e2e/studio_devnet_e2e.mjs (deploy tx
+          # 0x53acb35c...549c40); see docs/onchain-activity.md.
+          NEXT_PUBLIC_CONTRACT_ADDRESS: "0x405e957542856E5f6830EDD40757480BDA8ab594"
           NEXT_PUBLIC_GENLAYER_RPC: https://studio-dev.genlayer.com/api
         run: npm run build
       - uses: actions/configure-pages@v5

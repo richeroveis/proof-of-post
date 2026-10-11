@@ -1,0 +1,78 @@
+{
+  "address": "0x405e957542856E5f6830EDD40757480BDA8ab594",
+  "steps": [
+    {
+      "step": "fund",
+      "hash": "0x7b2b22a9c21853c52db5e84b376576cc56f5738d8f22f69698298e22530d62e3",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_submit",
+      "hash": "0x173be5f7eaa31eb4532816f45d855413c674f6def7fd2b404bb22f7833d014ea",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_evaluate",
+      "hash": "0xba123d592d99f4bb01efc8a7f5890e6f96d47ab16867ee8a57f186876a28343d",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_after_evaluate",
+      "entry_id": 4,
+      "status": "NON_COMPLIANT",
+      "reserved": "1000000000000000000",
+      "deadline": "18",
+      "tick": "14"
+    },
+    {
+      "step": "F_appeal",
+      "hash": "0xccd0d2bab72ceeedf5227b3d369173bcf66f5925e4775b4effcaf70f88412a09",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_appeal_result",
+      "status": "NON_COMPLIANT",
+      "appeals": "1",
+      "slashed_total": "2000000000000000000",
+      "reserved": "1000000000000000000",
+      "verified": "2",
+      "submitter_before": "0.499841723999998354",
+      "submitter_after": "0.499762099999997531",
+      "overturned": false
+    },
+    {
+      "step": "sweep_back",
+      "hash": "0x1597c27d6fe05a815f0a9cb4ef0ac0eaf1df019242dadb4d9db5cbf131b9f613",
+      "amount": "0.299762099999976827",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "0": "0",
+      "1": ".",
+      "2": "2",
+      "3": "0",
+      "4": "0",
+      "5": "0",
+      "6": "0",
+      "7": "0",
+      "8": "0",
+      "9": "0",
+      "10": "0",
+      "11": "0",
+      "12": "0",
+      "13": "0",
+      "14": "0",
+      "15": "2",
+      "16": "0",
+      "17": "7",
+      "18": "0",
+      "19": "4",
+      "step": "final_submitter_balance"
+    }
+  ]
+}

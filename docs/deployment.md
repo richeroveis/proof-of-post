@@ -1,6 +1,6 @@
 # Deployment Record — ProofOfPost (RuleRegistry)
 
-## Live deployment
+## Live deployment (remediated, 2026-10-11)
 
 | Field | Value |
 |---|---|
@@ -8,13 +8,28 @@
 | Chain ID | 61997 |
 | RPC | https://studio-dev.genlayer.com/api |
 | Contract | `contracts/rule_registry.py` → class `RuleRegistry` |
-| Address | `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b` |
-| Deploy tx | `0xba738586f4f50a12e9aa831d9bee2464c3a4f0a466f5516972a8f86d39233cd2` |
+| Address | `0x405e957542856E5f6830EDD40757480BDA8ab594` |
+| Deploy tx | `0x53acb35cd493bfee82c1928c3744c728f688d2cecf850503564cf68188549c40` |
 | Consensus | ACCEPTED (leader + validators executed with return) |
 | Constructor args | `min_bond = 1000000000000000000` (1 GEN, atto-scale) |
-| Owner / treasury | deployer `0x154a452b0755EE812014C1405B15D905BA06f9c7` (treasury retargetable via `set_treasury`) |
+| Owner | deployer `0x154a452b0755EE812014C1405B15D905BA06f9c7` |
+| Treasury | `0x053362b5dF6181de6571dF737C3940c04Df3d2c3` (set via `set_treasury`; withdrawals route ONLY here) |
 
-Superseded instances on the same network, kept for traceability:
+This instance carries the reviewer remediation (see
+[remediation-plan.md](./remediation-plan.md)): appeal-window reservation of
+slashed collateral, `cancel_pending` recovery, reject-don't-truncate input
+limits, and treasury-routed withdrawal. Its full write/settlement regression is
+recorded in [onchain-activity.md](./onchain-activity.md).
+
+## Superseded instance (pre-remediation)
+
+| Field | Value |
+|---|---|
+| Address | `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b` |
+| Deploy tx | `0xba738586f4f50a12e9aa831d9bee2464c3a4f0a466f5516972a8f86d39233cd2` |
+| Why superseded | carried the reviewer findings: slashed bonds withdrawable while still appealable, no PENDING recovery, silent rule truncation, `withdraw_slashed(to, …)` routing around the treasury setting |
+
+Earlier instances on the same network, kept for traceability:
 
 | Address | Why superseded |
 |---|---|
@@ -106,6 +121,26 @@ so the behavior is reproducible.
    ≈0.00008 GEN, i.e. the deposit is charged down to actual usage and the
    remainder returns to the sender. Budget for the quote, expect the remainder
    back.
+
+8. **The pinned runner has no clock.** v0.2.16's `genlayer` std lib exposes no
+   timestamp/block-height API (`gl.message` carries only addresses, value and
+   chain_id; the WASI surface is `get_balance`/`get_self_balance`/`gl_call` —
+   verified against the cached std lib). Wall-clock appeal windows and PENDING
+   timeouts are therefore impossible on-chain, and the newer runner that adds
+   `get_last_block_timestamp` cannot be loaded by the public toolchain
+   (finding 4). The contract implements its lifecycle clock instead: a `tick`
+   counter advanced by every finalized write, with windows expressed in ticks
+   (`APPEAL_WINDOW_TICKS = 4`) and PENDING recovery made safe by atomic
+   finalization rather than by a timer. See `docs/remediation-plan.md`.
+
+9. **Deploying via genlayer-js works with the same fee flow as writes.**
+   `client.deployContract({ code, args, fees })` with the
+   `estimateTransactionFees()` quote finalizes on studio-dev exactly like the
+   CLI path, and the contract address is recovered from the deploy tx
+   (`contract_address`), so the whole remediation regression runs through one
+   SDK (`e2e/studio_devnet_e2e.mjs`). Plain EO→EO transfers also work
+   (`sendTransaction({ to, value, fees })`) — used to fund the dedicated
+   submitter wallet without ever giving the treasury role submitter duties.
 
 ## Failed deploy attempts (no state, fees burned)
 

@@ -8,16 +8,32 @@ import json
 # =============================================================================
 # ProofOfPost - RuleRegistry
 #
-# A stake-backed content-compliance registry. A submitter posts content together
-# with an explicit natural-language rule set and a GEN bond. GenLayer validators
-# independently judge whether the content satisfies the rules; the contract
-# settles the normalized verdict on-chain:
+# A stake-backed content-compliance registry. A submitter posts LITERAL TEXT
+# (URLs are judged as text; nothing is ever fetched) together with an explicit
+# natural-language rule set and a GEN bond. GenLayer validators independently
+# judge whether the content satisfies the rules; the contract settles the
+# normalized verdict on-chain:
 #   COMPLIANT    -> bond refunded to submitter, entry marked verified
 #   INCONCLUSIVE -> bond refunded to submitter, not marked verified
-#   NON_COMPLIANT-> bond slashed (retained by contract, claimable by treasury)
+#   NON_COMPLIANT-> bond slashed: RESERVED against appeal liability first, then
+#                  finalized for treasury withdrawal once the liability expires
+#   CANCELLED    -> PENDING-only recovery path, bond refunded
 # The only non-deterministic operation is the compliance assessment, performed
 # with a comparative custom validator (independent re-derivation) via run_nondet.
 # All bond accounting / state transitions are deterministic.
+#
+# Appeal semantics (reviewer F6): appeal() re-runs the SAME assessment on the
+# SAME stored content/rules - no new evidence can be attached. It is bounded by
+# MAX_APPEALS and by the appeal window below.
+#
+# Time model (reviewer F2): the pinned v0.2.16 runner exposes no timestamp or
+# block-height API (verified against the runner std lib; see
+# docs/remediation-plan.md), so wall-clock windows are impossible on-chain.
+# The contract instead uses its own lifecycle clock: `tick` counts finalized
+# writes, an appeal window spans APPEAL_WINDOW_TICKS writes, and a stuck
+# PENDING bond is recovered through cancel_pending(), whose safety comes from
+# atomic finalization (evaluate and cancel serialize; the loser reverts with
+# [EXPECTED]) rather than from a timer.
 # =============================================================================
 
 # --- Error classification (see write-contract skill) ---
@@ -31,19 +47,27 @@ STATUS_PENDING = "PENDING"
 STATUS_COMPLIANT = "COMPLIANT"
 STATUS_NON_COMPLIANT = "NON_COMPLIANT"
 STATUS_INCONCLUSIVE = "INCONCLUSIVE"
+STATUS_CANCELLED = "CANCELLED"
 
 # --- Per-rule check outcomes ---
 CS_SATISFIED = "SATISFIED"
 CS_VIOLATED = "VIOLATED"
 CS_UNVERIFIABLE = "UNVERIFIABLE"
 
-# --- Bounded inputs / abuse controls ---
+# --- Bounded inputs / abuse controls (enforced by rejection, never by
+#     silent truncation - validators must judge exactly the stored rules) ---
 MAX_APPEALS = 2
 MAX_CONTENT_LEN = 8000
 MAX_RULES = 30
 MAX_RULE_LEN = 300
 MAX_TITLE_LEN = 200
 MAX_REASON_LEN = 1000
+
+# Appeal window measured in this contract's finalized writes (see time model in
+# the header). A NON_COMPLIANT verdict stays appealable for this many further
+# settled writes; until then (and until the appeal count cap is reached) the
+# slashed bond is reserved and cannot be withdrawn by the treasury.
+APPEAL_WINDOW_TICKS = 4
 
 _VALID_CS = [CS_SATISFIED, CS_VIOLATED, CS_UNVERIFIABLE]
 
@@ -79,18 +103,29 @@ class Entry:
     checks_json: str       # JSON list[{"rule","status"}]
     verdict_reason: str
     appeal_count: u256
+    appeal_deadline: u256  # tick at which appeal liability expires (0 = none)
 
 
 # -----------------------------------------------------------------------------
 # Deterministic helpers (module-level)
 # -----------------------------------------------------------------------------
 def _parse_rules(blob: str) -> list:
+    """Parse newline-delimited rules into exact rule texts.
+
+    Oversized inputs are REJECTED, never truncated (reviewer F3): the rules the
+    validators judge must be exactly the rules the submitter stored.
+    """
     rules = []
     for line in blob.split("\n"):
         text = line.strip()
-        if len(text) > 0:
-            rules.append(text[:MAX_RULE_LEN])
-    return rules[:MAX_RULES]
+        if len(text) == 0:
+            continue
+        if len(text) > MAX_RULE_LEN:
+            raise gl.vm.UserError(ERROR_EXPECTED + " Rule too long")
+        if len(rules) + 1 > MAX_RULES:
+            raise gl.vm.UserError(ERROR_EXPECTED + " Too many rules")
+        rules.append(text)
+    return rules
 
 
 def _build_prompt(rules: list, content: str) -> str:
@@ -227,6 +262,10 @@ class RuleRegistry(gl.Contract):
     verified_count: u256
     slashed_total: u256
     withdrawn_slashed: u256
+    # --- lifecycle clock + appeal-safe collateral accounting (reviewer F1/F2) ---
+    tick: u256              # counts finalized writes (the contract's time model)
+    bonded_pending: u256    # sum of bonds locked in PENDING entries
+    reserved_slashed: u256  # slashed bonds still inside their appeal window
 
     def __init__(self, min_bond: int):
         # Treasury defaults to the deployer; owner can retarget it via
@@ -240,16 +279,23 @@ class RuleRegistry(gl.Contract):
         self.verified_count = u256(0)
         self.slashed_total = u256(0)
         self.withdrawn_slashed = u256(0)
+        self.tick = u256(0)
+        self.bonded_pending = u256(0)
+        self.reserved_slashed = u256(0)
 
     # ----------------------------------------------------------------- writes
     @gl.public.write.payable
     def submit(self, title: str, content: str, rules_blob: str) -> u256:
         """Register a PENDING compliance entry. Requires a bond >= min_bond as value."""
+        self.tick = u256(self.tick + 1)
         sender = gl.message.sender_address
         bond = u256(gl.message.value)
 
         if bond < self.min_bond:
             raise gl.vm.UserError(ERROR_EXPECTED + " Bond below minimum")
+
+        if len(title) > MAX_TITLE_LEN:
+            raise gl.vm.UserError(ERROR_EXPECTED + " Title too long")
 
         clean_content = content.strip()
         if len(clean_content) == 0:
@@ -265,7 +311,7 @@ class RuleRegistry(gl.Contract):
         entry = Entry(
             entry_id=entry_id,
             submitter=sender,
-            title=title[:MAX_TITLE_LEN],
+            title=title,
             content=clean_content,
             rules_json=json.dumps(rules),
             bond=bond,
@@ -273,15 +319,23 @@ class RuleRegistry(gl.Contract):
             checks_json="[]",
             verdict_reason="",
             appeal_count=u256(0),
+            appeal_deadline=u256(0),
         )
         self.entries[entry_id] = entry
         self.entry_ids.append(entry_id)
         self.next_id = u256(self.next_id + 1)
+        self.bonded_pending = u256(self.bonded_pending + bond)
         return entry_id
 
     @gl.public.write
     def evaluate(self, entry_id: u256) -> str:
-        """Run consensus compliance assessment on a PENDING entry and settle the bond."""
+        """Run consensus compliance assessment on a PENDING entry and settle the bond.
+
+        The PENDING gate also makes cancel_pending race-free: an in-flight
+        evaluate either finalizes before the cancel (cancel then reverts) or
+        after it (this gate reverts it) - exactly one transition settles.
+        """
+        self.tick = u256(self.tick + 1)
         if entry_id not in self.entries:
             raise gl.vm.UserError(ERROR_EXPECTED + " No such entry")
 
@@ -298,21 +352,34 @@ class RuleRegistry(gl.Contract):
         entry.checks_json = json.dumps(result["checks"])
         entry.verdict_reason = result["reason"]
 
-        # Deterministic settlement driven by the consensus verdict.
+        # Deterministic settlement driven by the consensus verdict. The bond
+        # stops being a pending lock in every branch.
+        self.bonded_pending = u256(self.bonded_pending - entry.bond)
         if entry.status == STATUS_COMPLIANT:
             self.verified_count = u256(self.verified_count + 1)
             self._send(entry.submitter, entry.bond)
         elif entry.status == STATUS_INCONCLUSIVE:
             self._send(entry.submitter, entry.bond)
         elif entry.status == STATUS_NON_COMPLIANT:
+            # Slashed, but RESERVED while the verdict can still be overturned:
+            # a winning appeal must be refundable from collateral that is
+            # still in the contract (reviewer F1).
             self.slashed_total = u256(self.slashed_total + entry.bond)
+            self.reserved_slashed = u256(self.reserved_slashed + entry.bond)
+            entry.appeal_deadline = u256(self.tick + APPEAL_WINDOW_TICKS)
 
         self.entries[entry_id] = entry
         return entry.status
 
     @gl.public.write
     def appeal(self, entry_id: u256) -> str:
-        """Submitter re-opens consensus on a NON_COMPLIANT verdict (bounded)."""
+        """Submitter re-opens consensus on a NON_COMPLIANT verdict (bounded).
+
+        Re-adjudicates the SAME stored content and rules - no new evidence is
+        accepted (reviewer F6). Bounded by MAX_APPEALS and by the appeal
+        window (APPEAL_WINDOW_TICKS finalized writes after settlement).
+        """
+        self.tick = u256(self.tick + 1)
         if entry_id not in self.entries:
             raise gl.vm.UserError(ERROR_EXPECTED + " No such entry")
 
@@ -323,19 +390,29 @@ class RuleRegistry(gl.Contract):
             raise gl.vm.UserError(ERROR_EXPECTED + " Only NON_COMPLIANT can be appealed")
         if entry.appeal_count >= u256(MAX_APPEALS):
             raise gl.vm.UserError(ERROR_EXPECTED + " Appeal limit reached")
+        if u256(self.tick) >= u256(entry.appeal_deadline):
+            raise gl.vm.UserError(ERROR_EXPECTED + " Appeal window expired")
 
         result = self._assess(entry.content, entry.rules_json)
         entry.appeal_count = u256(entry.appeal_count + 1)
 
         if result["status"] != STATUS_NON_COMPLIANT:
-            # Verdict flipped: release the previously-slashed bond back to submitter.
+            # Verdict flipped: release the reservation, un-slash, and refund the
+            # submitter from collateral that was held back for exactly this.
+            self.reserved_slashed = u256(self.reserved_slashed - entry.bond)
             self.slashed_total = u256(self.slashed_total - entry.bond)
+            entry.appeal_deadline = u256(0)
             entry.status = result["status"]
             if entry.status == STATUS_COMPLIANT:
                 self.verified_count = u256(self.verified_count + 1)
             self._send(entry.submitter, entry.bond)
         else:
             entry.status = STATUS_NON_COMPLIANT
+            if entry.appeal_count >= u256(MAX_APPEALS):
+                # Appeal liability exhausted while upheld: the collateral
+                # becomes finalized and withdrawable.
+                self.reserved_slashed = u256(self.reserved_slashed - entry.bond)
+                entry.appeal_deadline = u256(0)
 
         entry.checks_json = json.dumps(result["checks"])
         entry.verdict_reason = result["reason"]
@@ -343,25 +420,68 @@ class RuleRegistry(gl.Contract):
         return entry.status
 
     @gl.public.write
-    def withdraw_slashed(self, to: str, amount: int) -> None:
-        """Owner withdraws accrued slashed bonds (up to available, capped by balance)."""
+    def cancel_pending(self, entry_id: u256) -> str:
+        """Recover the bond of a submission that never reached a verdict.
+
+        Only a PENDING entry can be cancelled, and CANCELLED is terminal: a
+        later evaluate/appeal reverts deterministically at the status gates,
+        so cancellation can never bypass a finalized verdict or an active
+        appeal, and the bond leaves the contract exactly once. WHEN a pending
+        assessment counts as late is decided by the driver (e.g. the UI's
+        lifecycle polling), because the pinned runner has no clock - see the
+        time model in the header and docs/remediation-plan.md.
+        """
+        self.tick = u256(self.tick + 1)
+        if entry_id not in self.entries:
+            raise gl.vm.UserError(ERROR_EXPECTED + " No such entry")
+
+        entry = self.entries[entry_id]
+        caller = gl.message.sender_address
+        if caller != entry.submitter and caller != self.owner:
+            raise gl.vm.UserError(ERROR_EXPECTED + " Not authorized to cancel")
+        if entry.status != STATUS_PENDING:
+            raise gl.vm.UserError(ERROR_EXPECTED + " Entry not pending")
+
+        entry.status = STATUS_CANCELLED
+        entry.appeal_deadline = u256(0)
+        self.bonded_pending = u256(self.bonded_pending - entry.bond)
+        self.entries[entry_id] = entry
+        self._send(entry.submitter, entry.bond)
+        return entry.status
+
+    @gl.public.write
+    def withdraw_slashed(self, amount: int) -> None:
+        """Owner withdraws FINALIZED slashed collateral to the treasury.
+
+        Reviewer F1/F5: the destination is always the configured treasury
+        (there is no free `to` parameter), and collateral whose appeal window
+        has not expired - or whose appeal budget is not exhausted - stays
+        reserved and cannot be withdrawn, so a winning appeal is always
+        refundable. Expired reservations are swept atomically inside this
+        write before the availability check.
+        """
+        self.tick = u256(self.tick + 1)
         if gl.message.sender_address != self.owner:
             raise gl.vm.UserError(ERROR_EXPECTED + " Only owner")
         amt = u256(int(amount))
         if amt <= 0:
             raise gl.vm.UserError(ERROR_EXPECTED + " Amount must be positive")
-        available = u256(self.slashed_total - self.withdrawn_slashed)
+        self._sweep_expired_reservations()
+        available = u256(self.slashed_total - self.withdrawn_slashed - self.reserved_slashed)
         if amt > available:
+            if self.reserved_slashed > 0:
+                raise gl.vm.UserError(ERROR_EXPECTED + " Collateral reserved for appeal window")
             raise gl.vm.UserError(ERROR_EXPECTED + " Exceeds available slashed")
         if amt > self.balance:
             raise gl.vm.UserError(ERROR_EXPECTED + " Insufficient contract balance")
         self.withdrawn_slashed = u256(self.withdrawn_slashed + amt)
-        self._send(Address(to), amt)
+        self._send(self.treasury, amt)
 
     @gl.public.write
     def set_treasury(self, treasury: str) -> None:
         if gl.message.sender_address != self.owner:
             raise gl.vm.UserError(ERROR_EXPECTED + " Only owner")
+        self.tick = u256(self.tick + 1)
         self.treasury = Address(treasury)
 
     # ------------------------------------------------------------------ views
@@ -381,6 +501,8 @@ class RuleRegistry(gl.Contract):
             "checks": json.loads(e.checks_json),
             "verdict_reason": e.verdict_reason,
             "appeal_count": str(e.appeal_count),
+            "appeal_deadline": str(e.appeal_deadline),
+            "tick": str(self.tick),
         }
 
     @gl.public.view
@@ -404,18 +526,24 @@ class RuleRegistry(gl.Contract):
                 "status": e.status,
                 "bond": str(e.bond),
                 "appeal_count": str(e.appeal_count),
+                "appeal_deadline": str(e.appeal_deadline),
             })
             i = u256(i + 1)
         return out
 
     @gl.public.view
     def get_stats(self) -> dict:
+        available = u256(self.slashed_total - self.withdrawn_slashed - self.reserved_slashed)
         return {
             "total": str(len(self.entry_ids)),
             "verified": str(self.verified_count),
             "min_bond": str(self.min_bond),
             "slashed_total": str(self.slashed_total),
             "withdrawn_slashed": str(self.withdrawn_slashed),
+            "reserved_slashed": str(self.reserved_slashed),
+            "available_slashed": str(available),
+            "bonded_pending": str(self.bonded_pending),
+            "tick": str(self.tick),
             "contract_balance": str(self.balance),
             "owner": self.owner.as_hex,
             "treasury": self.treasury.as_hex,
@@ -426,6 +554,28 @@ class RuleRegistry(gl.Contract):
         return str(self.min_bond)
 
     # ----------------------------------------------------- internal (private)
+    @gl.private
+    def _sweep_expired_reservations(self) -> None:
+        """Finalize slashed collateral whose appeal window has elapsed.
+
+        Runs inside a write (never a view) so the reservation release is
+        atomic with the accounting that consumes it. Clearing appeal_deadline
+        to 0 marks the entry finalized, which makes the sweep idempotent and
+        prevents a double release of reserved_slashed.
+        """
+        ids = self.entry_ids
+        total = u256(len(ids))
+        i = u256(0)
+        while i < total:
+            eid = ids[i]
+            entry = self.entries[eid]
+            if u256(entry.appeal_deadline) > 0 and u256(self.tick) >= u256(entry.appeal_deadline):
+                if entry.status == STATUS_NON_COMPLIANT:
+                    self.reserved_slashed = u256(self.reserved_slashed - entry.bond)
+                entry.appeal_deadline = u256(0)
+                self.entries[eid] = entry
+            i = u256(i + 1)
+
     @gl.private
     def _assess(self, content: str, rules_json: str) -> dict:
         """The single non-deterministic operation, with a comparative validator."""

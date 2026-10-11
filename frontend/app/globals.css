@@ -67,6 +67,7 @@ section > h2 { font-size: 18px; margin: 0 0 12px; }
 .badge.COMPLIANT { background: rgba(55,211,153,0.14); color: var(--ok); border-color: rgba(55,211,153,0.4); }
 .badge.NON_COMPLIANT { background: rgba(255,107,107,0.14); color: var(--bad); border-color: rgba(255,107,107,0.4); }
 .badge.INCONCLUSIVE { background: rgba(148,163,192,0.14); color: var(--muted); border-color: rgba(148,163,192,0.4); }
+.badge.CANCELLED { background: rgba(122,134,158,0.12); color: var(--muted); border-color: rgba(122,134,158,0.35); text-decoration: line-through; }
 .badge.SATISFIED { background: rgba(55,211,153,0.14); color: var(--ok); }
 .badge.VIOLATED { background: rgba(255,107,107,0.14); color: var(--bad); }
 .badge.UNVERIFIABLE { background: rgba(148,163,192,0.14); color: var(--muted); }

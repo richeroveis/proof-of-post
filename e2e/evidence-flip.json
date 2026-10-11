@@ -1,0 +1,65 @@
+{
+  "address": "0x405e957542856E5f6830EDD40757480BDA8ab594",
+  "steps": [
+    {
+      "step": "fund",
+      "hash": "0x557086045202bd87ad864f33ddf13b9e048f981eef960f6b8cc79a04b49f32bd",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_submit",
+      "hash": "0x838299613fbc830e851ead0be7438c28ccd084babdf8b10ad0d97c53078f9b9b",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_evaluate",
+      "hash": "0x2b192543cc6d7281eaaa5e6e3a68d041fcf600c73f10fd8439bc8deb76b6432a",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "step": "F_after_evaluate",
+      "entry_id": 3,
+      "status": "COMPLIANT",
+      "reserved": "0",
+      "deadline": "0",
+      "tick": "12"
+    },
+    {
+      "step": "F_appeal_result",
+      "skipped": "evaluate returned COMPLIANT; no reversal needed/possible"
+    },
+    {
+      "step": "sweep_back",
+      "hash": "0xae32197eb679ad4968ee531b6e51f1cae961437ff59ca7e85c20883e5f8b8a7c",
+      "amount": "1.29979425599997765",
+      "status": "FINALIZED",
+      "execError": null
+    },
+    {
+      "0": "0",
+      "1": ".",
+      "2": "2",
+      "3": "0",
+      "4": "0",
+      "5": "0",
+      "6": "0",
+      "7": "0",
+      "8": "0",
+      "9": "0",
+      "10": "0",
+      "11": "0",
+      "12": "0",
+      "13": "0",
+      "14": "0",
+      "15": "2",
+      "16": "0",
+      "17": "7",
+      "18": "0",
+      "19": "4",
+      "step": "final_submitter_balance"
+    }
+  ]
+}

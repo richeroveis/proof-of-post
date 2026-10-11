@@ -1,0 +1,252 @@
+{
+  "startedAt": "2026-10-11T14:20:35.273Z",
+  "network": "studio-dev(61997)",
+  "steps": [
+    {
+      "step": "fund_submitter",
+      "at": "2026-10-11T14:20:52.470Z",
+      "hash": "0xc2373a761f3a47af14fcc96ba9247efec4119e0705eb83ebf52bec8677cffa16",
+      "status": "FINALIZED",
+      "execError": null,
+      "sub_before": "0",
+      "sub_after": "3.2"
+    },
+    {
+      "step": "deploy",
+      "at": "2026-10-11T14:21:51.029Z",
+      "hash": "0x53acb35cd493bfee82c1928c3744c728f688d2cecf850503564cf68188549c40",
+      "status": "FINALIZED",
+      "execError": null,
+      "address": "0x405e957542856E5f6830EDD40757480BDA8ab594"
+    },
+    {
+      "step": "set_treasury",
+      "at": "2026-10-11T14:22:38.920Z",
+      "hash": "0xa74fc35369f059a10c82f9d979c09d8bb31abb02e05b8f4f36d41f30ec1fccb4",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "treasury_configured",
+      "at": "2026-10-11T14:22:42.537Z",
+      "treasury": "0x053362b5dF6181de6571dF737C3940c04Df3d2c3",
+      "stats": {
+        "available_slashed": "0",
+        "bonded_pending": "0",
+        "contract_balance": "0",
+        "min_bond": "1000000000000000000",
+        "owner": "0x154a452b0755EE812014C1405B15D905BA06f9c7",
+        "reserved_slashed": "0",
+        "slashed_total": "0",
+        "tick": "1",
+        "total": "0",
+        "treasury": "0x053362b5dF6181de6571dF737C3940c04Df3d2c3",
+        "verified": "0",
+        "withdrawn_slashed": "0"
+      }
+    },
+    {
+      "step": "R_submit",
+      "at": "2026-10-11T14:23:28.367Z",
+      "hash": "0x348d0e278c41445d951c4927df66ffe694243b981135291f5c2c485d81153a30",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "R_submit",
+      "at": "2026-10-11T14:23:34.857Z",
+      "hash": "0x348d0e278c41445d951c4927df66ffe694243b981135291f5c2c485d81153a30",
+      "status": "FINALIZED",
+      "execError": null,
+      "entry_id": 0
+    },
+    {
+      "step": "R_evaluate",
+      "at": "2026-10-11T14:24:39.486Z",
+      "hash": "0xaf4fbb5765b66ac2a8cff5eb7fea654f8a30995dc7ab3f8c724541e9e97a67ee",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "R_evaluate",
+      "at": "2026-10-11T14:24:46.059Z",
+      "status": "COMPLIANT",
+      "reserved": "0",
+      "slashed_total": "0",
+      "deadline": "0",
+      "tick": "3"
+    },
+    {
+      "step": "B_submit",
+      "at": "2026-10-11T14:25:34.008Z",
+      "hash": "0x89a4edd4944cb0943185307acbd39e5ef0531d9f814dd259e562959cd54edb9b",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "B_evaluate",
+      "at": "2026-10-11T14:26:45.037Z",
+      "hash": "0xe6459c728abae77e0101a04c94f1470c46b6ac94e353c1da95d69fd6208c2502",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "B_evaluate",
+      "at": "2026-10-11T14:26:51.992Z",
+      "entry_id": 1,
+      "status": "NON_COMPLIANT",
+      "slashed_total": "1000000000000000000",
+      "reserved": "1000000000000000000",
+      "available": "0"
+    },
+    {
+      "step": "B_withdraw_premature",
+      "at": "2026-10-11T14:27:32.814Z",
+      "hash": "0x1f76692e8eae3f86e75e21c5db681865a895e88baea0a2e428f8184b646edeae",
+      "status": "FINALIZED",
+      "execError": "[EXPECTED] Collateral reserved for appeal window"
+    },
+    {
+      "step": "B_withdraw_premature_check",
+      "at": "2026-10-11T14:27:36.238Z",
+      "rejected": true,
+      "reserved": "1000000000000000000"
+    },
+    {
+      "step": "B_appeal_1",
+      "at": "2026-10-11T14:28:22.592Z",
+      "hash": "0xb1f25a1fa1b54cc27672c895c951e465dafc6db69da72fca608f2f325dee2cea",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "B_appeal_1",
+      "at": "2026-10-11T14:28:29.055Z",
+      "status": "NON_COMPLIANT",
+      "appeals": "1",
+      "reserved": "1000000000000000000",
+      "available": "0"
+    },
+    {
+      "step": "B_appeal_2",
+      "at": "2026-10-11T14:29:23.586Z",
+      "hash": "0xcf945a3d48c5f6712f3aaabb21c8e34add8302a44294b50af71dd4043582854b",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "B_appeal_2",
+      "at": "2026-10-11T14:29:29.890Z",
+      "status": "NON_COMPLIANT",
+      "appeals": "2",
+      "reserved": "0",
+      "available": "1000000000000000000"
+    },
+    {
+      "step": "B_withdraw_finalized",
+      "at": "2026-10-11T14:30:11.849Z",
+      "hash": "0xf8bf5a7bceda188cc4979d74a2f55a5e8e91888baab8fc03c4b3801bc58db4cd",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "B_withdraw_finalized",
+      "at": "2026-10-11T14:30:21.924Z",
+      "amount": "1",
+      "withdrawn_counter": "1000000000000000000",
+      "treasury_before": "0",
+      "treasury_after": "1",
+      "contract_balance": "0",
+      "reserved": "0"
+    },
+    {
+      "step": "C_submit",
+      "at": "2026-10-11T14:31:08.988Z",
+      "hash": "0xf7a7031f940f80dced83b940279593d6d1cb8d8ff57d039aeb775d34f26740c4",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "C_cancel",
+      "at": "2026-10-11T14:32:07.724Z",
+      "hash": "0xa7793daeed7619e8703a1414e8fc2e271c4942ab79538bb5187f0fd825950dbe",
+      "status": "FINALIZED"
+    },
+    {
+      "step": "C_cancel",
+      "at": "2026-10-11T14:32:21.639Z",
+      "entry_id": 2,
+      "status": "CANCELLED",
+      "bonded_pending": "0",
+      "submitter_before": "1.199396987999994239",
+      "submitter_after": "2.199270683999993416"
+    },
+    {
+      "step": "C_late_evaluate",
+      "at": "2026-10-11T14:33:06.936Z",
+      "hash": "0x27d93aae9015ea60ff246f2b6d33d7c332e2b33ae5eaede6aa6bd59ccda9d1f5",
+      "status": "FINALIZED",
+      "execError": "[EXPECTED] Entry not pending"
+    },
+    {
+      "step": "C_late_evaluate_check",
+      "at": "2026-10-11T14:33:10.262Z",
+      "still_cancelled": true,
+      "status": "CANCELLED"
+    },
+    {
+      "step": "F3_oversized_rules",
+      "at": "2026-10-11T14:33:59.673Z",
+      "hash": "0x51fe4c987231487ca3264d61895699f6c3d2055f6fc893cac1fed42deac4b6b5",
+      "status": "FINALIZED",
+      "execError": "[EXPECTED] Too many rules"
+    },
+    {
+      "step": "F3_oversized_rules_check",
+      "at": "2026-10-11T14:34:03.138Z",
+      "rejected": true,
+      "total": "3"
+    },
+    {
+      "step": "final",
+      "at": "2026-10-11T14:34:10.589Z",
+      "address": "0x405e957542856E5f6830EDD40757480BDA8ab594",
+      "stats": {
+        "available_slashed": "0",
+        "bonded_pending": "0",
+        "contract_balance": "0",
+        "min_bond": "1000000000000000000",
+        "owner": "0x154a452b0755EE812014C1405B15D905BA06f9c7",
+        "reserved_slashed": "0",
+        "slashed_total": "1000000000000000000",
+        "tick": "10",
+        "total": "3",
+        "treasury": "0x053362b5dF6181de6571dF737C3940c04Df3d2c3",
+        "verified": "1",
+        "withdrawn_slashed": "1000000000000000000"
+      },
+      "entries": [
+        {
+          "id": "0",
+          "status": "COMPLIANT",
+          "appeals": "0",
+          "deadline": "0"
+        },
+        {
+          "id": "1",
+          "status": "NON_COMPLIANT",
+          "appeals": "2",
+          "deadline": "0"
+        },
+        {
+          "id": "2",
+          "status": "CANCELLED",
+          "appeals": "0",
+          "deadline": "0"
+        }
+      ],
+      "invariants": {
+        "I1_slashed_ge_withdrawn_plus_reserved": true,
+        "I4_available_consistent": true,
+        "I6_balance_covers_locks": true
+      },
+      "balances": {
+        "owner": "164.797336175999975075",
+        "submitter": "2.19911342799999177",
+        "treasury": "1",
+        "contract": "0"
+      }
+    }
+  ]
+}

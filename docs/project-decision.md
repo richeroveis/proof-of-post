@@ -9,11 +9,20 @@ GenLayer-native concept.
 ## One-line definition
 
 ProofOfPost is a **stake-backed content-compliance registry**: a submitter posts
-content (or a URL) together with an explicit natural-language rule set and a
-bond; GenLayer validators independently assess whether the content satisfies the
-rules; the contract settles a normalized verdict (COMPLIANT → entry registered +
-bond kept, NON_COMPLIANT → bond slashed, INCONCLUSIVE → bond held/refundable),
-with an appeal path that forces validator re-evaluation.
+literal text (URLs are judged as text; remote content is never fetched) together
+with an explicit natural-language rule set and a bond; GenLayer validators
+independently assess whether the content satisfies the rules; the contract
+settles a normalized verdict (COMPLIANT → entry registered + bond kept,
+NON_COMPLIANT → bond slashed and RESERVED against the appeal window before any
+treasury withdrawal, INCONCLUSIVE → bond held/refundable), with an appeal path
+that forces validator re-evaluation (same evidence, bounded count and window)
+and a `cancel_pending` recovery path for submissions that never settle.
+
+> 2026-10-11 revision (reviewer remediation): the original wording said
+> "content (or a URL)" - no fetching has ever been implemented, so the product
+> is now explicitly literal-text; and slashed bonds were withdrawable while
+> still appealable, which the reservation model in `docs/remediation-plan.md`
+> fixes.
 
 ## Why GenLayer is genuinely required
 
