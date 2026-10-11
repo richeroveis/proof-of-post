@@ -53,21 +53,26 @@ validator for consensus on failure paths.
 **Live demo:** https://richeroveis.github.io/proof-of-post (GitHub Pages,
 browser-verified reads against the deployed contract)
 **Deployed contract (studio-dev, chainId 61997):**
-`0x405e957542856E5f6830EDD40757480BDA8ab594` (remediated instance; supersedes
+`0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (current F7 + withdraw-hardened
+instance, deploy tx `0xfcdf6512…660b6`; supersedes the pre-F7
+`0x405e957542856E5f6830EDD40757480BDA8ab594` and pre-remediation
 `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b`)
 **Network:** GenLayer Studio Devnet — RPC `https://studio-dev.genlayer.com/api` (non-gasless; fee ~0.00008 GEN per settled tx after refund)
 
 **Setup & test instructions:** see repo `README` / `docs/testing.md` —
 `genvm-lint check contracts/rule_registry.py`; `pytest tests/direct -q`
-(41 direct tests); guarded integration suite via `gltest`; full live
-regression `node e2e/studio_devnet_e2e.mjs`.
+(44 direct tests); guarded integration suite via `gltest`; full live
+regression `node e2e/studio_devnet_e2e.mjs` (from the `e2e/` dir after
+`npm install`).
 **Architecture docs:** `docs/research.md`, `docs/project-decision.md`,
 `docs/deployment.md`, `docs/onchain-activity.md`,
 `docs/remediation-plan.md`.
 **Evidence of real functionality:** live reads verified in-browser on the Pages
-demo; the 2026-10-11 remediation regression settled real verdicts, rejected a
-premature treasury withdrawal on-chain, refunded a cancelled bond, and moved
-1 GEN of finalized slashed collateral to the configured treasury (hashes in
+demo; the 2026-10-11 F7 regression on the CURRENT instance settled real
+verdicts, rejected a premature treasury withdrawal on-chain, paid 1 GEN of
+finalized slashed collateral to the configured treasury, refunded a cancelled
+bond, rejected oversized rules, and — critically — proved the previously
+exploitable appeal survives third-party tick-window spam on-chain (full hashes in
 `docs/onchain-activity.md`).
 
 ---
@@ -145,12 +150,44 @@ judgment by design.
 |---|---|---|
 | Repo | github.com/richeroveis/proof-of-post | pushed (`main`) |
 | Project demo | richeroveis.github.io/proof-of-post | live, browser-verified |
-| RuleRegistry (remediated) | 0x405e957542856E5f6830EDD40757480BDA8ab594 | live on studio-dev, full E2E regression |
+| RuleRegistry (current, F7+hardened) | 0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E | live on studio-dev, full F7 E2E regression |
+| RuleRegistry (pre-F7) | 0x405e957542856E5f6830EDD40757480BDA8ab594 | historical, counter-gated appeal |
 | RuleRegistry (superseded) | 0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b | pre-remediation instance |
 | EvidenceOracle | 0xc315465D70D377CDB078aB0117C011d46A288E1F | FINALIZED, get_stats/get_min_bond read OK |
 | ScoreRegistry | 0x2579a22a567a6A9D424Fa6225c201aD359bd8d66 | FINALIZED, get_stats/list_items read OK |
-| Direct tests | 41 (main) + 54 (standalone) | all pass |
+| Direct tests | 44 (main) + 54 (standalone) | all pass (98 total; 12 integration guarded/skipped) |
 | Lint | both standalone + main | genvm-lint check PASS |
+
+## Remediation matrix (evidence-based)
+
+All "live" evidence is on the CURRENT instance `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E`;
+tx hashes resolve to `docs/onchain-activity.md` / `e2e/evidence.json`.
+
+| Finding | Change | Verification evidence | Status |
+|---|---|---|---|
+| F1 slashed collateral raidable while appealable | `reserved_slashed` + per-entry `appeal_deadline`; withdraw sweeps only expired reservations, then re-checks availability | `test_attack_withdraw_while_appealable_fails_then_win_refunds`; live premature-withdraw REJECT `0x98ddb8f1…` | Verified (local + live) |
+| F2 stuck PENDING locks the bond | `cancel_pending` (PENDING-only; CANCELLED terminal) | `test_cancel_pending_recovers_bond`, `test_late_evaluate_and_appeal_after_cancel_revert`; live cancel refund `0xf862edf8…` + late-eval rejected | Verified (local + live) |
+| F3 silent rule/title truncation | reject over-limit inputs, never truncate | boundary tests at max/max+1; live `Too many rules` REJECT | Verified (local + live) |
+| F4 wording implied URL fetching | scoped to literal text everywhere (header/README/UI) | docs + prompt treats content as untrusted data | Verified (docs) |
+| F5 `withdraw_slashed(to, …)` routed around treasury | `withdraw_slashed(amount)` pays only `self.treasury` | treasury-destination tests; live treasury 0 → 1 GEN `0x69faad85…` | Verified (local + live) |
+| F6 unclear appeal semantics | bounded re-adjudication of identical evidence, documented | count-cap + status tests; live upheld appeal `0x9579e160…` | Verified (local + live) |
+| F7 tick-window denial by third-party spam | reservation-gated appeal (right ends only on true finalization) | `test_spam_cannot_deny_legitimate_appeal`, `test_appeal_refused_after_withdraw_sweeps_reservation`, `test_post_deadline_*`, `test_mixed_window_sweep_*`; **live** window-burn → appeal FINALIZED on `0x30A9A1…` | Verified (local + live); **semantics await reviewer sign-off** |
+| (audit) negative withdraw amount opaque cast | validate raw signed int before `u256` cast | `test_withdraw_negative_amount_rejected_cleanly` | Verified (local) |
+| (audit) bond need not equal `min_bond` | exact-bond slash/reserve/refund/withdraw | `test_bond_above_minimum_is_slashed_reserved_and_withdrawn_exactly` | Verified (local) |
+
+## Exact resubmission steps
+
+1. Reproduce locally: `pip install -r requirements.txt`, `genvm-lint check
+   contracts/rule_registry.py`, `pytest tests/direct standalone -q` (expect 98
+   passed / 12 skipped), `cd frontend && npm ci && npm run build`.
+2. Reproduce live: `cd e2e && npm install && node studio_devnet_e2e.mjs`
+   (requires the studio-dev key in `.env`; deploys a fresh instance + runs R/B/C/F3/F7).
+3. Submit the Project entry pointing at repo `main` @ the final commit, the live
+   Pages demo URL, and the deployed address `0x30A9A1D8…149E` (studio-dev, 61997).
+4. Submit each standalone contract (`standalone/evidence-oracle`,
+   `standalone/score-registry`) with its README + deployed address.
+5. A human must (a) confirm the live campaign point ranges/field schema in-browser
+   (portal is a JS SPA), and (b) explicitly accept the F7 appeal-semantics change.
 
 ## Outstanding before submission
 
@@ -160,6 +197,8 @@ judgment by design.
 3. **Reviewer sign-off on the F7 appeal-semantics change**: appealability is no
    longer time-boxed by the lifecycle tick — it continues past the nominal
    sweep-eligibility window until the liability is finalized by a completed
-   paying treasury withdrawal or the two-appeal budget (verified locally only;
-   the deployed `0x405e…b594` still runs the counter-gated appeal until
-   redeployed). See `docs/remediation-plan.md` F7.
+   paying treasury withdrawal or the two-appeal budget. This is now **deployed and
+   live-verified** on `0x30A9A1D8…149E` (the tick-window-spam appeal survives
+   on-chain; see `docs/onchain-activity.md`), but remains a protocol-semantic
+   decision awaiting explicit reviewer acceptance — it is not claimed accepted.
+   See `docs/remediation-plan.md` F7.

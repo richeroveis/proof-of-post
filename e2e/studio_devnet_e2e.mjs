@@ -167,7 +167,7 @@ let rId = null;
     value: MIN_BOND, fees: { distribution: est.distribution, feeValue: est.feeValue },
   }));
   rId = (await stats()).total === "0" ? 0 : Number((await stats()).total) - 1;
-  rec("R_submit", { ...t, entry_id: rId });
+  rec("R_submit", { hash: t.hash, status: t.status, entry_id: rId });
 }
 {
   await write("R_evaluate", subClient, (est) => subClient.writeContract({
@@ -312,6 +312,84 @@ let bId = null;
   }));
   const after = await stats();
   rec("F3_oversized_rules_check", { rejected: after.total === before.total, total: after.total });
+}
+
+// ---------------------------------------------------------------------------
+// 6.5 Case F7 - reservation-gated appeal SURVIVES third-party tick-window spam.
+//     Create a NON_COMPLIANT reserved entry, burn past its nominal appeal window
+//     with cheap self-canceling submit+cancel cycles, prove the tick advance
+//     ALONE did not finalize the liability (bond still reserved), then show the
+//     submitter's appeal still EXECUTES. Under the pre-F7 counter-gated appeal
+//     (deployed 0x405e...) this exact appeal reverted once the tick passed the
+//     deadline; the freshly deployed reservation-gated code must not.
+// ---------------------------------------------------------------------------
+{
+  const F7_RULES = "Must be written in English\nMust not contain any URL";
+  const F7_CONTENT = "Este texto esta en espanol y enlaza https://example.com.";
+  await write("F7_submit", subClient, (est) => subClient.writeContract({
+    address: ADDR, functionName: "submit", args: ["F7 window burn", F7_CONTENT, F7_RULES],
+    value: MIN_BOND, fees: { distribution: est.distribution, feeValue: est.feeValue },
+  }));
+  const f7Id = Number((await stats()).total) - 1;
+  await write("F7_evaluate", subClient, (est) => subClient.writeContract({
+    address: ADDR, functionName: "evaluate", args: [BigInt(f7Id)],
+    value: 0n, fees: { distribution: est.distribution, feeValue: est.feeValue },
+  }));
+  let entry = await read(ADDR, "get_entry", [BigInt(f7Id)]);
+
+  if (entry.status !== "NON_COMPLIANT") {
+    rec("F7_window_burned", { skipped: `evaluate gave ${entry.status}, not NON_COMPLIANT` });
+  } else {
+    const deadline = BigInt(entry.appeal_deadline);
+    const reservedBefore = (await stats()).reserved_slashed;
+
+    // Burn the window with owner self-canceling cycles (bonds return at once;
+    // each pair advances the tick by 2). Bounded to 6 cycles.
+    let cycles = 0;
+    for (;;) {
+      if (BigInt((await stats()).tick) >= deadline || cycles >= 6) break;
+      await write("F7_burn_submit", mainClient, (est) => mainClient.writeContract({
+        address: ADDR, functionName: "submit", args: ["burn", "burn content", F7_RULES],
+        value: MIN_BOND, fees: { distribution: est.distribution, feeValue: est.feeValue },
+      }));
+      const cid = Number((await stats()).total) - 1;
+      await write("F7_burn_cancel", mainClient, (est) => mainClient.writeContract({
+        address: ADDR, functionName: "cancel_pending", args: [BigInt(cid)],
+        value: 0n, fees: { distribution: est.distribution, feeValue: est.feeValue },
+      }));
+      cycles += 1;
+    }
+
+    const afterBurn = await stats();
+    entry = await read(ADDR, "get_entry", [BigInt(f7Id)]);
+    rec("F7_window_burned", {
+      cycles, deadline: entry.appeal_deadline, tick: afterBurn.tick,
+      tick_reached_deadline: BigInt(afterBurn.tick) >= deadline,
+      reserved_before_burn: reservedBefore, reserved_after_burn: afterBurn.reserved_slashed,
+      tick_advance_did_not_finalize: BigInt(afterBurn.reserved_slashed) === BigInt(reservedBefore),
+    });
+
+    // The appeal must still EXECUTE despite the elapsed tick window.
+    const subBefore = await balanceOf(subAcct.address);
+    const ap = await write("F7_appeal", subClient, (est) => subClient.writeContract({
+      address: ADDR, functionName: "appeal", args: [BigInt(f7Id)],
+      value: 0n, fees: { distribution: est.distribution, feeValue: est.feeValue },
+    }));
+    await sleep(6000);
+    const entry3 = await read(ADDR, "get_entry", [BigInt(f7Id)]);
+    const s3 = await stats();
+    rec("F7_appeal_after_burn", {
+      appeal_status: ap.status,
+      // appeal_count incremented => the write settled (not reverted by a gate).
+      appeal_processed: entry3.appeal_count === "1",
+      exec_error: ap.execError ?? null,
+      refused_by_finalized_liability: (ap.execError ?? "").includes("liability finalized"),
+      status_after: entry3.status, appeals: entry3.appeal_count,
+      reserved: s3.reserved_slashed, slashed_total: s3.slashed_total,
+      submitter_before: subBefore, submitter_after: await balanceOf(subAcct.address),
+      verdict_flipped: entry3.status !== "NON_COMPLIANT",
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------

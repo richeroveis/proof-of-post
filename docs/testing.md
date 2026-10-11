@@ -20,10 +20,10 @@ finding 4), so we keep the pinned runner and re-evaluate before submission.
 ## 2. Behavioral tests — direct mode
 
 ```
-python -m pytest tests/direct/        # 41 tests, ~2s, no server
+python -m pytest tests/direct/        # 44 tests, ~2s, no server
 ```
 
-Result: **41 passed**. Runs the real contract code in-process and exercises the
+Result: **44 passed**. Runs the real contract code in-process and exercises the
 leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
 - Deploy / initial accounting (`get_stats`), lifecycle `tick`.
@@ -60,6 +60,13 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
   unauthorized cancel, cancel-after-verdict, double cancel and **late evaluate
   after cancel** all revert deterministically.
 - Treasury withdrawal: owner-only, insufficient-balance guard.
+- Resubmission-audit additions: `withdraw_slashed` validates the raw signed int
+  for `<= 0` before the unsigned `u256` cast, pinned by
+  `test_withdraw_negative_amount_rejected_cleanly`; accounting scales with the
+  ACTUAL posted bond (not `min_bond`) via
+  `test_bond_above_minimum_is_slashed_reserved_and_withdrawn_exactly`; and
+  `test_withdraw_sweep_finalizes_all_elapsed_reservations` pins that a paying
+  sweep finalizes every elapsed reservation while the ledger invariants hold.
 - List pagination.
 - Validator: agrees on independent re-derivation, disagrees on a mismatched
   leader status, and disagrees on leader LLM error (forces rotation).

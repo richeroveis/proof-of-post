@@ -22,15 +22,17 @@ their own as reusable GenLayer primitives.
 | Live demo | https://richeroveis.github.io/proof-of-post |
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
-| Main contract `RuleRegistry` (remediated) | `0x405e957542856E5f6830EDD40757480BDA8ab594` |
+| Main contract `RuleRegistry` (F7 + withdraw-hardened, 2026-10-11) | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
 
-The remediation of the reviewer findings (slashed-collateral reservation,
-PENDING recovery, strict rule-size limits, treasury routing) is documented in
-[`docs/remediation-plan.md`](docs/remediation-plan.md) with the exact
-regression tests and live transaction evidence in
-[`docs/onchain-activity.md`](docs/onchain-activity.md).
+The remediation of the reviewer findings (F1 slashed-collateral reservation,
+F2 PENDING recovery, F3 strict rule-size limits, F5 treasury-only routing, F6
+bounded appeal semantics, F7 reservation-gated appeal hardened against third-party
+tick-window spam, plus a `withdraw_slashed` malformed-input guard) is documented
+in [`docs/remediation-plan.md`](docs/remediation-plan.md) with the exact
+regression tests, and every security path above is exercised against the live
+contract in [`docs/onchain-activity.md`](docs/onchain-activity.md).
 
 ---
 
@@ -165,8 +167,10 @@ decides whether a bond is refunded or slashed.
   right to appeal continues past that tick until the liability is actually
   finalized — a completed paying withdrawal or the two-appeal budget being
   exhausted. This is a deliberate protocol-semantic change (see
-  `docs/remediation-plan.md`, F7) and needs reviewer sign-off; a quiet
-  registry therefore keeps collateral reserved longer in real time, which is the
+  `docs/remediation-plan.md`, F7): it is now deployed and **live-verified on
+  `0x30A9A1D8…d149E`** (the tick-window-spam appeal survives on-chain), but it
+  still **needs reviewer sign-off** as a semantics decision; a quiet registry
+  therefore keeps collateral reserved longer in real time, which is the
   conservative direction for submitters.
 - Whether a verdict is *reversible* on appeal is up to the validator ensemble:
   the reversal/refund path is proven deterministic in direct tests and live

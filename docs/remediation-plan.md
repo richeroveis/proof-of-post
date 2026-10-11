@@ -110,8 +110,35 @@ I6  contract_balance >= bonded_pending + reserved_slashed + available_for_withdr
   single privileged, economically-committing, fully visible on-chain act -
   inherent to any clockless design, not removable without giving the owner an
   even cheaper finalization path.
-- **Local-only:** the fix is NOT yet on Studio Devnet — the live
-  `0x405e…b594` instance runs the counter-gated appeal until the next
-  deployment (no deployment performed during this audit; storage layout is
-  unchanged so a redeploy carries no migration risk, but the old instance's
-  behavior remains as documented above).
+- **Resubmission audit (2026-10-11, this pass):** a fresh full review of the
+  remediated contract confirmed the F1–F7 accounting is sound (all I1–I6
+  invariants hold on every mutation path traced). Two additions from that audit:
+  (1) a `withdraw_slashed` hardening — the raw signed int is validated for
+  `<= 0` BEFORE the unsigned `u256` cast, so a negative amount reverts with a
+  clean `[EXPECTED]` error instead of an opaque cast failure; (2) three new
+  adversarial direct tests — `test_withdraw_negative_amount_rejected_cleanly`,
+  `test_bond_above_minimum_is_slashed_reserved_and_withdrawn_exactly`,
+  `test_withdraw_sweep_finalizes_all_elapsed_reservations`. Direct suite now
+  **44 passed** (main), **98 passed / 12 skipped** overall (the 12 are guarded
+  live-integration tests, never counted as passing); `genvm-lint` PASS; frontend
+  production build PASS; `git diff --check` clean.
+- **Deployed and live-verified (previously local-only):** the reservation-gated
+  F7 code + the withdraw guard were redeployed to a NEW studio-dev instance
+  `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (deploy tx
+  `0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6`, FINALIZED,
+  5-validator MAJORITY_AGREE). The e2e now proves F7 **on-chain**: burning the
+  nominal window with self-canceling submit+cancel cycles advanced the tick past
+  `appeal_deadline` yet left the bond reserved, and the submitter's subsequent
+  appeal still FINALIZED and incremented `appeal_count` (the pre-F7 counter-gate
+  reverted this exact call). Premature-withdrawal rejection, treasury-only routing
+  (treasury 0 → 1 GEN via external message), cancel recovery, oversized-rule
+  rejection and I1/I4/I6 conservation were all observed live — full table in
+  `docs/onchain-activity.md`. `0x405e…b594` is retained as the historical
+  pre-F7 deployment; `0x61eE…304b` as pre-remediation.
+- **Reviewer sign-off still required (not claimed accepted):** the F7
+  appeal-semantics change (appeal gated on the reservation, not the lifecycle
+  tick) is now deployed and verified, but it remains a protocol-semantic decision
+  for the reviewer to explicitly accept. What was NOT shown live: a
+  verdict-reversing appeal with on-chain refund — the shared ensemble did not
+  flip any of the three appealable entries in this run and consensus cannot be
+  forced without fabrication; that path is proven deterministic in direct tests.

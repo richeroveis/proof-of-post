@@ -482,9 +482,14 @@ class RuleRegistry(gl.Contract):
         self.tick = u256(self.tick + 1)
         if gl.message.sender_address != self.owner:
             raise gl.vm.UserError(ERROR_EXPECTED + " Only owner")
-        amt = u256(int(amount))
-        if amt <= 0:
+        # Validate the raw signed integer BEFORE the unsigned u256 cast: a
+        # negative `amount` otherwise fails opaquely at construction instead of
+        # reverting with a deterministic, classified [EXPECTED] error (audit
+        # boundary: malformed/zero/negative inputs must fail cleanly).
+        amount_int = int(amount)
+        if amount_int <= 0:
             raise gl.vm.UserError(ERROR_EXPECTED + " Amount must be positive")
+        amt = u256(amount_int)
         self._sweep_expired_reservations()
         available = u256(self.slashed_total - self.withdrawn_slashed - self.reserved_slashed)
         if amt > available:

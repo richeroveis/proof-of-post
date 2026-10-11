@@ -5,7 +5,47 @@ every write path and the money that moves with it. Nothing here is mocked;
 every hash below is queryable on `studio-dev` (chain ID 61997) at
 https://studio-dev.genlayer.com/api.
 
-## Remediation regression 2026-10-11 — `0x405e957542856E5f6830EDD40757480BDA8ab594`
+## F7 + withdraw-hardening regression 2026-10-11 — `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
+
+Full scripted run: `e2e/studio_devnet_e2e.mjs` (structured evidence in
+`e2e/evidence.json`, raw `raw` fields stripped). Distinct wallets: owner/deployer
+= repo studio-dev key; submitter + treasury = throwaway in-memory keys (never
+persisted). Every hash is FINALIZED and queryable on studio-dev (chain 61997).
+
+| # | Call | Tx | Outcome |
+|---|---|---|---|
+| 0 | fund submitter (EO→EO 3.2 GEN) | `0x44f0c8669e13a8741fdaf6a41cca4bc66265bb6afad6eea652514ee8990d825b` | submitter → 3.2 GEN |
+| 1 | deploy (fee-aware) | `0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6` | contract `0x30A9…149E`, 5-validator MAJORITY_AGREE |
+| 2 | `set_treasury` | `0x100d98bb5083efcce228649c745503600ca02aaa88c947e5d433d962c76ea8e7` | treasury `0x754238CA…1Cda` configured |
+| 3 | R `evaluate` (≤10-word Jupiter post) | `0xd8cb28e2e6256d425d9e3ee3e9f222dc184c421ed1ed123fb936fdd8663f99bb` | **COMPLIANT**, refunded, `verified=1` |
+| 4 | B `evaluate` (Spanish + URL) | `0xe13fd5bb1b28a5b6f856d2f887b34fe5c08a1ad4ceae64d608e2b5b33832bace` | **NON_COMPLIANT**, `slashed=1 reserved=1 available=0` |
+| 5 | **premature** `withdraw_slashed(1)` | `0x98ddb8f1edccf68994c34fa073e280f17cb7ee1817fdc3de59d62eb58d367687` | **REJECTED** — `[EXPECTED] Collateral reserved for appeal window`; ledger unchanged (F1 live) |
+| 6 | B `appeal` #1 | `0x9579e160f9f4e8e472b71e1372ee726bcc893e4fd432f10de0756e32f2291b74` | upheld; still reserved |
+| 7 | B `appeal` #2 | `0xfcd2635125d5d1120b0e5f2934c78dcd30ade31e6f4ff339340fb6d18b4ec781` | upheld; cap → exhausted: `reserved=0 available=1` |
+| 8 | `withdraw_slashed(1)` | `0x69faad85301486db1ea213e81f24623d7ce6787fe60836a2e6fce43c63d4c7ce` | **treasury 0 → 1 GEN** via external message (F5 live); `withdrawn=1` |
+| 9 | C `cancel_pending` | `0xf862edf88930b5a5e186160464c632598f128025f01056decda41a920ad34209` | **CANCELLED**; submitter 1.199 → 2.199 GEN (F2 live) |
+| 10 | C late `evaluate` | (rejected) | stays CANCELLED — `Entry not pending`; no double settle |
+| 11 | 31-rule `submit` | (rejected) | **REJECTED** — `Too many rules`; `total` unchanged (F3 live) |
+| 12 | F7 `evaluate` (Spanish + URL) | `0xdd15d77d7f9e843fd07d48bed06d0dafe6965bb63585f19c3c62b89dd1e5254c` | **NON_COMPLIANT**, reserved, `appeal_deadline=16` |
+| 13 | F7 window burn (submit+cancel ×2) | see `evidence.json` | tick 12 → 16 (past deadline); **`reserved` still 1 — tick advance did NOT finalize** |
+| 14 | **F7 `appeal` after window burn** | see `evidence.json` | **FINALIZED, `appeal_count=1`** — appeal SURVIVED the burned tick window; **not** refused by `liability finalized` (F7 live — the pre-F7 counter-gate reverted here) |
+
+Final ledger: `total=6 verified=1 slashed=2 withdrawn=1 reserved=1 available=0
+bonded_pending=0 contract_balance=1` — the residual 1 GEN is exactly the F7
+entry's still-reserved, still-appealable bond. Invariants **I1/I4/I6 all true**.
+
+**What was NOT demonstrated live:** a verdict-*reversing* appeal with an on-chain
+refund. R was COMPLIANT up front, B stayed NON_COMPLIANT through both appeals,
+and the F7 appeal was upheld — the shared validator ensemble did not flip any of
+them, and consensus cannot be forced without fabricating results. The
+reversal/un-reserve/refund transition is proven deterministically in direct tests
+(`test_appeal_flips_non_compliant_to_compliant`,
+`test_attack_withdraw_while_appealable_fails_then_win_refunds`); the live refund
+*mechanism* was itself demonstrated twice (steps 3 COMPLIANT refund, 9 cancel
+refund). Residual devnet state (the F7 entry's reserved 1 GEN and the throwaway
+keys) dies with the ephemeral studio-dev reset.
+
+## Remediation regression 2026-10-11 (earlier, pre-F7) — `0x405e957542856E5f6830EDD40757480BDA8ab594`
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (raw evidence in
 `e2e/evidence.json`, `e2e/e2e.log`), plus two focused reversal attempts

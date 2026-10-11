@@ -716,6 +716,118 @@ def test_withdraw_zero_and_over_cap_rejected(direct_vm, direct_deploy, direct_al
     _assert_ledger(contract)
 
 
+def test_withdraw_negative_amount_rejected_cleanly(direct_vm, direct_deploy, direct_alice, direct_owner):
+    """AUDIT boundary: a negative amount must fail with the same deterministic
+    [EXPECTED] error as zero, not an opaque unsigned-cast failure, and must not
+    mutate the ledger. Exercises the raw-int sign check added before the u256
+    cast in withdraw_slashed."""
+    contract, entry_id = _slash_one(direct_vm, direct_deploy, direct_alice)
+    contract.appeal(entry_id)
+    contract.appeal(entry_id)  # finalize: available == MIN_BOND, reserved 0
+    before = dict(contract.get_stats())
+
+    direct_vm.sender = direct_owner
+    with direct_vm.expect_revert("Amount must be positive"):
+        contract.withdraw_slashed(-1)
+    after = contract.get_stats()
+    # Nothing was released or paid out by the rejected call.
+    assert after["withdrawn_slashed"] == before["withdrawn_slashed"]
+    assert after["reserved_slashed"] == "0"
+    assert after["available_slashed"] == str(MIN_BOND)
+    _assert_ledger(contract)
+
+
+def test_bond_above_minimum_is_slashed_reserved_and_withdrawn_exactly(
+    direct_vm, direct_deploy, direct_alice, direct_owner
+):
+    """AUDIT: accounting must scale with the ACTUAL posted bond, never assume it
+    equals min_bond. A 2x bond slashes, reserves, exhausts, and withdraws at the
+    exact 2x amount with every ledger invariant intact."""
+    contract = _deploy(direct_deploy)
+    big = 2 * MIN_BOND
+    direct_vm.sender = direct_alice
+    direct_vm.value = big
+    entry_id = contract.submit("t", "content", RULES_BLOB)
+    assert contract.get_stats()["bonded_pending"] == str(big)
+
+    _mock_llm(direct_vm, ["VIOLATED", "SATISFIED"])
+    direct_vm.value = 0
+    assert contract.evaluate(entry_id) == "NON_COMPLIANT"
+    stats = contract.get_stats()
+    assert stats["slashed_total"] == str(big)      # slashed the FULL bond
+    assert stats["reserved_slashed"] == str(big)   # reserved the FULL bond
+    _assert_ledger(contract)
+
+    # Two upheld appeals finalize the liability at the full amount.
+    contract.appeal(entry_id)
+    contract.appeal(entry_id)
+    stats = contract.get_stats()
+    assert stats["reserved_slashed"] == "0"
+    assert stats["available_slashed"] == str(big)
+    _assert_ledger(contract)
+
+    # Treasury pulls the exact finalized 2x bond (funded so the balance guard
+    # passes as it would on-chain).
+    direct_vm.sender = direct_owner
+    direct_vm.deal(direct_vm._contract_address, big)
+    contract.withdraw_slashed(big)
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(big)
+    assert stats["available_slashed"] == "0"
+    _assert_ledger(contract)
+
+
+def test_withdraw_sweep_finalizes_all_elapsed_reservations(
+    direct_vm, direct_deploy, direct_alice, direct_bob, direct_owner
+):
+    """AUDIT: the sweep inside one withdrawal finalizes EVERY reservation whose
+    nominal window has elapsed - including an entry whose submitter still has
+    appeal budget but never used it before the window closed. This is the
+    documented trade-off (the tick window is the appeal deadline; only the
+    owner executing a withdrawal after the window can finalize an un-exhausted
+    reservation). Pinned so the behavior is intentional, not accidental, and the
+    ledger invariants still hold across the mixed finalization."""
+    contract = _deploy(direct_deploy)
+    direct_vm.sender = direct_alice
+    direct_vm.value = MIN_BOND
+    a = contract.submit("a", "content a", RULES_BLOB)
+    direct_vm.value = MIN_BOND
+    b = contract.submit("b", "content b", RULES_BLOB)
+    _mock_llm(direct_vm, ["VIOLATED", "SATISFIED"])
+    direct_vm.value = 0
+    contract.evaluate(a)
+    contract.evaluate(b)
+    dl_a = int(contract.get_entry(a)["appeal_deadline"])
+    dl_b = int(contract.get_entry(b)["appeal_deadline"])
+    assert contract.get_stats()["reserved_slashed"] == str(2 * MIN_BOND)
+
+    # Burn past BOTH windows (no appeal used by the submitters).
+    direct_vm.sender = direct_bob
+    direct_vm.value = MIN_BOND
+    while int(contract.get_stats()["tick"]) < max(dl_a, dl_b):
+        contract.submit("filler", "filler content", RULES_BLOB)
+    direct_vm.value = 0
+
+    # One owner withdrawal both sweeps the elapsed reservations AND pays out:
+    # neither entry stays appealable, and both bonds become the treasury's.
+    direct_vm.sender = direct_owner
+    direct_vm.deal(direct_vm._contract_address, 2 * MIN_BOND)
+    contract.withdraw_slashed(2 * MIN_BOND)
+    stats = contract.get_stats()
+    assert stats["reserved_slashed"] == "0"
+    assert stats["withdrawn_slashed"] == str(2 * MIN_BOND)
+    assert stats["available_slashed"] == "0"
+    assert contract.get_entry(a)["appeal_deadline"] == "0"
+    assert contract.get_entry(b)["appeal_deadline"] == "0"
+    _assert_ledger(contract)
+
+    # Finalized liability -> the submitter's appeal is refused, not double-paid.
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Appeal liability finalized"):
+        contract.appeal(a)
+    _assert_ledger(contract)
+
+
 # -----------------------------------------------------------------------------
 # Reviewer regression: F2 permanently-PENDING recovery via cancel_pending
 # -----------------------------------------------------------------------------

@@ -1,0 +1,14 @@
+{
+  "name": "proof-of-post-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Studio Devnet end-to-end verification driver for the remediated RuleRegistry (F1-F7).",
+  "type": "module",
+  "scripts": {
+    "e2e": "node studio_devnet_e2e.mjs"
+  },
+  "dependencies": {
+    "genlayer-js": "2.0.0-rc.1",
+    "viem": "2.21.54"
+  }
+}

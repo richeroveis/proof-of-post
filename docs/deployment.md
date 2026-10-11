@@ -1,6 +1,6 @@
 # Deployment Record — ProofOfPost (RuleRegistry)
 
-## Live deployment (remediated, 2026-10-11)
+## Live deployment (F7 + withdraw-hardened, 2026-10-11)
 
 | Field | Value |
 |---|---|
@@ -8,18 +8,29 @@
 | Chain ID | 61997 |
 | RPC | https://studio-dev.genlayer.com/api |
 | Contract | `contracts/rule_registry.py` → class `RuleRegistry` |
-| Address | `0x405e957542856E5f6830EDD40757480BDA8ab594` |
-| Deploy tx | `0x53acb35cd493bfee82c1928c3744c728f688d2cecf850503564cf68188549c40` |
-| Consensus | ACCEPTED (leader + validators executed with return) |
+| Address | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
+| Deploy tx | `0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6` (FINALIZED, no execution error) |
+| Consensus | leader + validators executed with return (5 validators, MAJORITY_AGREE) |
 | Constructor args | `min_bond = 1000000000000000000` (1 GEN, atto-scale) |
 | Owner | deployer `0x154a452b0755EE812014C1405B15D905BA06f9c7` |
-| Treasury | `0x053362b5dF6181de6571dF737C3940c04Df3d2c3` (set via `set_treasury`; withdrawals route ONLY here) |
+| Treasury | `0x754238CAa006B99fe686Bb729457c6E49D231Cda` (set via `set_treasury`; withdrawals route ONLY here) |
 
-This instance carries the reviewer remediation (see
-[remediation-plan.md](./remediation-plan.md)): appeal-window reservation of
-slashed collateral, `cancel_pending` recovery, reject-don't-truncate input
-limits, and treasury-routed withdrawal. Its full write/settlement regression is
-recorded in [onchain-activity.md](./onchain-activity.md).
+This instance carries the full reviewer remediation (see
+[remediation-plan.md](./remediation-plan.md)): F1 appeal-window reservation of
+slashed collateral, F2 `cancel_pending` recovery, F3 reject-don't-truncate input
+limits, F5 treasury-routed withdrawal, F6 bounded appeal semantics, F7 the
+reservation-gated appeal hardened against third-party tick-window spam, plus a
+`withdraw_slashed` raw-int malformed-input guard. The F7 tick-spam survival and
+every money/reservation path were exercised **live** on this address
+(recorded in [onchain-activity.md](./onchain-activity.md)).
+
+## Superseded instance (pre-F7, 2026-10-11 earlier same day)
+
+| Field | Value |
+|---|---|
+| Address | `0x405e957542856E5f6830EDD40757480BDA8ab594` |
+| Deploy tx | `0x53acb35cd493bfee82c1928c3744c728f688d2cecf850503564cf68188549c40` |
+| Why superseded | carried F1-F6 but the **counter-gated** appeal (a third party could still deny an appeal once the shared tick passed the deadline); replaced by the reservation-gated F7 instance above |
 
 ## Superseded instance (pre-remediation)
 
