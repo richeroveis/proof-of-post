@@ -1,0 +1,77 @@
+{
+  "startedAt": 1791696056476,
+  "marks": [
+    {
+      "name": "app_loaded",
+      "t": 8.196
+    },
+    {
+      "name": "show_netline",
+      "t": 12.343
+    },
+    {
+      "name": "show_stats",
+      "t": 14.802
+    },
+    {
+      "name": "typed_key",
+      "t": 16.692
+    },
+    {
+      "name": "signer_connected",
+      "t": 19.147
+    },
+    {
+      "name": "form_filled",
+      "t": 28.584
+    },
+    {
+      "name": "show_form",
+      "t": 29.943
+    },
+    {
+      "name": "submit_sent",
+      "t": 32.661
+    },
+    {
+      "name": "submit_finalized",
+      "t": 103.373
+    },
+    {
+      "name": "new_entry_visible",
+      "t": 107.249
+    },
+    {
+      "name": "evaluate_sent",
+      "t": 110.102
+    },
+    {
+      "name": "evaluate_finalized",
+      "t": 212.114
+    },
+    {
+      "name": "verdict_shown",
+      "t": 221.96
+    },
+    {
+      "name": "appeal_row",
+      "t": 224.943
+    },
+    {
+      "name": "appeal_sent",
+      "t": 227.631
+    },
+    {
+      "name": "appeal_finalized",
+      "t": 329.641
+    },
+    {
+      "name": "appeal_count_visible",
+      "t": 333.023
+    },
+    {
+      "name": "closing_pan",
+      "t": 338.008
+    }
+  ]
+}

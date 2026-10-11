@@ -1,0 +1,33 @@
+[mark 8.2s] app_loaded
+[mark 12.3s] show_netline
+[mark 14.8s] show_stats
+[mark 16.7s] typed_key
+[mark 19.1s] signer_connected
+[mark 28.6s] form_filled
+[mark 29.9s] show_form
+submit tx line: submit submitted → 0x56a2b77e5b13a5774bf4f0cca26a944592189ccd617a3817736782531fd9ff35 · waiting for validator consensus…
+[mark 32.7s] submit_sent
+submit final: submit finished with lifecycle FINALIZED · 0x56a2b77e5b13a5774bf4f0cca26a944592189ccd617a3817736782531fd9ff35
+[mark 103.4s] submit_finalized
+[mark 107.2s] new_entry_visible
+evaluate tx line: evaluate #2 submitted → 0x0b341d87c6e2fc101a73f08b0b799fbb5137ca901c355796752f96a340582ea0 · waiting for validator consensus…
+[mark 110.1s] evaluate_sent
+evaluate final: evaluate #2 finished with lifecycle FINALIZED · 0x0b341d87c6e2fc101a73f08b0b799fbb5137ca901c355796752f96a340582ea0
+[mark 212.1s] evaluate_finalized
+[mark 222.0s] verdict_shown
+[mark 224.9s] appeal_row
+appeal tx line: appeal #1 submitted → 0x9435353f860468528e3198dbad50916276aacd8e4b030e7d12015775bd09d778 · waiting for validator consensus…
+[mark 227.6s] appeal_sent
+appeal final: appeal #1 finished with lifecycle FINALIZED · 0x9435353f860468528e3198dbad50916276aacd8e4b030e7d12015775bd09d778
+[mark 329.6s] appeal_finalized
+[mark 333.0s] appeal_count_visible
+[mark 338.0s] closing_pan
+first row label: #0
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+video.saveAs: Target page, context or browser has been closed
+    at /home/hoveiser/Project/proof-of-post/demo/async file:/home/hoveiser/Project/proof-of-post/demo/capture/walkthrough.mjs:203:14
+
+Node.js v24.18.1

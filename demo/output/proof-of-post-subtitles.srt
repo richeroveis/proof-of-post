@@ -1,0 +1,63 @@
+1
+00:00:00,000 --> 00:00:02,500
+ProofOfPost — on-chain content-rule adjudication
+
+2
+00:00:02,520 --> 00:00:05,120
+What if content rules could be enforced on-chain?
+
+3
+00:00:05,120 --> 00:00:07,920
+Post content, define natural-language rules, back it with a GEN bond.
+
+4
+00:00:08,040 --> 00:00:11,840
+Connect a studio-dev-only signer — the key stays in memory.
+
+5
+00:00:11,840 --> 00:00:17,040
+Submit content and define the rules it must satisfy.
+
+6
+00:00:17,320 --> 00:00:22,220
+submit() locks the 1 GEN bond and creates a PENDING entry.
+
+7
+00:00:22,240 --> 00:00:26,340
+The write settles through validator consensus… (sped up 16x)
+
+8
+00:00:26,320 --> 00:00:31,420
+FINALIZED — entry #2 sits in the registry as PENDING.
+
+9
+00:00:31,440 --> 00:00:35,940
+evaluate() asks the validators to judge the content.
+
+10
+00:00:35,960 --> 00:00:40,960
+Each validator independently re-derives the verdict. (sped up 20x)
+
+11
+00:00:40,920 --> 00:00:44,320
+Settled verdict: COMPLIANT — all three rules satisfied.
+
+12
+00:00:44,320 --> 00:00:48,020
+The contract refunds the bond to the submitter.
+
+13
+00:00:48,000 --> 00:00:52,900
+appeal() re-opens consensus on a NON_COMPLIANT verdict (max 2).
+
+14
+00:00:52,880 --> 00:00:56,980
+Appeal consensus… (sped up 24x)
+
+15
+00:00:57,000 --> 00:01:02,400
+Verdict stands: NON_COMPLIANT, appeals 1 — bond stays slashed.
+
+16
+00:01:02,400 --> 00:01:05,100
+ProofOfPost explores verifiable content compliance with intelligent contracts.

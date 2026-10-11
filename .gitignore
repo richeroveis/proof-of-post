@@ -60,3 +60,10 @@ Thumbs.db
 # --- Local, token-reading setup helpers (never commit) ---
 /gh_*.ps1
 /setup_*.ps1
+
+# --- Demo video production: build intermediates + raw capture media ---
+# (final deliverables live in demo/output/; the raw 339 s recording and the
+# per-step stills/browsers stay local only)
+/demo/build/
+/demo/capture/video/
+/demo/capture/shots/

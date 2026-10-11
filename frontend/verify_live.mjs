@@ -31,5 +31,5 @@ process.stdout.write("deploy tx " + hash + "\n");
 process.stdout.write("contract  " + address + "\n");
 const stats = norm(await client.readContract({ address, functionName: "get_stats", args: [] }));
 process.stdout.write("get_stats " + JSON.stringify(stats) + "\n");
-const list = norm(await client.readContract({ address, functionName: "list_items", args: [0n, 5n] }));
-process.stdout.write("list_items " + JSON.stringify(list) + "\n");
+const list = norm(await client.readContract({ address, functionName: "list_entries", args: [0n, 5n] }));
+process.stdout.write("list_entries " + JSON.stringify(list) + "\n");
