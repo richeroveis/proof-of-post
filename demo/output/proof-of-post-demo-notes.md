@@ -1,5 +1,15 @@
 # ProofOfPost Demo Video — Production Notes
 
+> **HISTORICAL RECORDING.** This video was captured against the pre-remediation
+> contract instance `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b` (devnet chain
+> timestamps shown in the video read 2026-08-08) and its UI. That instance was
+> superseded by the remediated deployment
+> `0x405e957542856E5f6830EDD40757480BDA8ab594` (appeal-window collateral
+> reservation, `cancel_pending`, strict rule limits, treasury-routed withdrawals -
+> see `docs/remediation-plan.md`). Everything shown here is still a truthful
+> recording of what happened on the old instance, but the contract behaviors and
+> statistics displayed no longer match the live one.
+
 Recorded and rendered: 2026-10-11 (Asia/Tehran). All footage is a real,
 un-staged session of the live application; nothing in the video is mocked.
 
