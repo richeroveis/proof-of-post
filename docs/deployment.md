@@ -1,4 +1,4 @@
-# Deployment Record — ProofOfPost (RuleRegistry)
+# Deployment Record - ProofOfPost (RuleRegistry)
 
 ## Live deployment (F7 + withdraw-hardened, 2026-10-11)
 
@@ -71,7 +71,7 @@ so the behavior is reproducible.
 
 2. **The runner header must carry a version-preamble line.** On this fleet, a
    contract whose file begins directly with `# { "Depends": "py-genlayer:…" }`
-   executes as `invalid_contract runner malformed` — unanimously (leader and
+   executes as `invalid_contract runner malformed` - unanimously (leader and
    all validators), regardless of pin, line endings (CRLF and LF fail
    identically), or header form (single-line and multi-line `Seq` both fail).
    Prefixing the pin with `# v0.2.16` on its own line (the format the hosted
@@ -123,7 +123,7 @@ so the behavior is reproducible.
    External messages always execute on finalization and their kwargs accept only
    `value`, so passing `on=` there is a runtime error. Direct mode does not model
    native transfers at all (22/22 tests passed either way), so this class of bug
-   is only visible against a real network — it is why Phase 9 settles money, not
+   is only visible against a real network - it is why Phase 9 settles money, not
    just verdicts. After the fix the same sequence moves GEN exactly (see
    [onchain-activity.md](./onchain-activity.md)).
 
@@ -135,7 +135,7 @@ so the behavior is reproducible.
 
 8. **The pinned runner has no clock.** v0.2.16's `genlayer` std lib exposes no
    timestamp/block-height API (`gl.message` carries only addresses, value and
-   chain_id; the WASI surface is `get_balance`/`get_self_balance`/`gl_call` —
+   chain_id; the WASI surface is `get_balance`/`get_self_balance`/`gl_call` -
    verified against the cached std lib). Wall-clock appeal windows and PENDING
    timeouts are therefore impossible on-chain, and the newer runner that adds
    `get_last_block_timestamp` cannot be loaded by the public toolchain
@@ -150,13 +150,13 @@ so the behavior is reproducible.
    CLI path, and the contract address is recovered from the deploy tx
    (`contract_address`), so the whole remediation regression runs through one
    SDK (`e2e/studio_devnet_e2e.mjs`). Plain EO→EO transfers also work
-   (`sendTransaction({ to, value, fees })`) — used to fund the dedicated
+   (`sendTransaction({ to, value, fees })`) - used to fund the dedicated
    submitter wallet without ever giving the treasury role submitter duties.
 
 ## Failed deploy attempts (no state, fees burned)
 
 `0xc7bbe151…` (addr treasury), `0x9b91aa74…` (str treasury),
-`0x1dc0f6e2…` (LF, no preamble), `0x9d568a18…` (Seq header) — all
+`0x1dc0f6e2…` (LF, no preamble), `0x9d568a18…` (Seq header) - all
 ACCEPTED + leader `FINISHED_WITH_ERROR` with `invalid_contract runner
 malformed`; kept as evidence for finding 2. A failed deploy creates no
 contract, as expected.

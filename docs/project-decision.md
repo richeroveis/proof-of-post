@@ -29,7 +29,7 @@ and a `cancel_pending` recovery path for submissions that never settle.
 - A plain deterministic smart contract cannot interpret whether free-form content
   satisfies natural-language compliance rules.
 - A single centralized AI check is opaque, censorable, and easily contested when
-  it has a financial consequence (bond slashing) — the decision must be
+  it has a financial consequence (bond slashing) - the decision must be
   reproducible across independent validators and appealable.
 - The compliance verdict directly drives an on-chain settlement (register / slash /
   refund), which is exactly the "AI-mediated judgment tied to a state transition"
@@ -51,7 +51,7 @@ and a `cancel_pending` recovery path for submissions that never settle.
 
 ### Out of scope / deferred (unless approval requested)
 - Any backend server (only added if a hard technical limitation forces it).
-- Mainnet or non-dev networks (never — all chain ops stay on the authorized dev net).
+- Mainnet or non-dev networks (never - all chain ops stay on the authorized dev net).
 - Irreversible campaign submissions without an explicit human approval gate (Phase 11).
 
 ## Consensus design boundary (per write-contract skill)

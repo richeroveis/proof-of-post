@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import json
 
 # =============================================================================
-# EvidenceOracle — a standalone GenLayer intelligent contract
+# EvidenceOracle - a standalone GenLayer intelligent contract
 #
 # "I claim this public web page says X" becomes a bonded, appealable on-chain
 # attestation that other contracts and frontends can consume.

@@ -1,8 +1,8 @@
-# Testing Report — ProofOfPost (RuleRegistry)
+# Testing Report - ProofOfPost (RuleRegistry)
 
 Three-layer validation, per the campaign's security/testability criteria.
 
-## 1. Static validation — `genvm-lint`
+## 1. Static validation - `genvm-lint`
 
 ```
 genvm-lint check contracts/rule_registry.py
@@ -10,14 +10,14 @@ genvm-lint check contracts/rule_registry.py
 
 Result: **PASS**. `validate: ok=true`. Contract `RuleRegistry`, 9 methods
 (4 view, 5 write), constructor params 1 (`min_bond`; the treasury defaults to
-the deployer — see `docs/deployment.md` finding 3). The runner pin
+the deployer - see `docs/deployment.md` finding 3). The runner pin
 `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` is accepted,
 preceded by the `# v0.2.16` version-preamble line that the Studio Devnet
 executor requires. A non-blocking note reports a newer runner is available; it
 cannot be loaded by the current public toolchain (`docs/deployment.md`
 finding 4), so we keep the pinned runner and re-evaluate before submission.
 
-## 2. Behavioral tests — direct mode
+## 2. Behavioral tests - direct mode
 
 ```
 python -m pytest tests/direct/        # 44 tests, ~2s, no server
@@ -78,7 +78,7 @@ these tests assert the contract's internal ledger (`verified_count`,
 `slashed_total`, `reserved_slashed`, `withdrawn_slashed`, `bonded_pending`) and
 never a recipient's balance. Direct mode also does not roll back mid-write state
 on a revert (on-chain finalization does) - the window-expiry test documents that
-harness difference explicitly. That boundary cost us a real bug once — the first
+harness difference explicitly. That boundary cost us a real bug once - the first
 deployed version paid bonds out with an internal IC→IC message, which an EOA can
 never receive, and **all 22 direct tests then passing** proved nothing about
 delivery. Payout delivery is therefore covered by the live settlement regression
@@ -88,14 +88,14 @@ documented as accounting-only.
 ### Windows harness workaround
 
 `gltest`'s direct harness injects the message by `os.dup2`-ing a temp file onto
-stdin (fd 0) and then immediately `os.unlink`-ing it — which raises
+stdin (fd 0) and then immediately `os.unlink`-ing it - which raises
 `PermissionError`/`WinError 32` on Windows because fd 0 still holds the file.
 `tools/win_stdin_patch.py` rebinds only the cleanup timing (defer the unlink to
 `atexit`); the message is built and injected identically and no installed
 package file is modified. `tests/direct/conftest.py` applies it for the test
 process.
 
-## 3. Consensus tests — integration (real GenLayer network)
+## 3. Consensus tests - integration (real GenLayer network)
 
 ```
 $env:RUN_INTEGRATION='1'
@@ -106,7 +106,7 @@ gltest tests/integration/ -v -s --network studio-dev
 is written for full
 leader + validator consensus and asserts only genuinely deterministic
 transitions (deploy, bond-gated submit, resolved-entry double-evaluate revert,
-appeal authorization) — a real LLM verdict is non-reproducible and is therefore
+appeal authorization) - a real LLM verdict is non-reproducible and is therefore
 not pinned to an exact status. The suite is skipped by default
 (`RUN_INTEGRATION` guard): the shipped `gltest` has no studio-dev network
 profile and no fee-deposit flow, while studio-dev charges a non-zero fee on
@@ -115,7 +115,11 @@ on the real network by the accepted production deploys (leader + all validators
 executed with return) and by the bounded Phase 9 on-chain activity, driven
 fee-aware through `genlayer-js@2.0.0-rc.1` (`estimateTransactionFees` →
 `writeContract({ value, fees })`) and recorded with transaction hashes and
-balance deltas in `docs/onchain-activity.md`.
+balance deltas in `docs/onchain-activity.md`. Those recorded hashes are not
+taken on faith: `node frontend/verify_evidence.mjs` re-queries every evidence
+transaction directly against the studio-dev RPC and asserts statuses and
+rejection payloads independently of the driver log (re-run 2026-10-12:
+22/22 FINALIZED, all payload expectations met, exit 0).
 
 ### Why not GLSim locally
 

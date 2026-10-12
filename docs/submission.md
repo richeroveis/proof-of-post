@@ -1,4 +1,4 @@
-# Submission Preparation — GenLayer Builder Campaign (Phase 11)
+# Submission Preparation - GenLayer Builder Campaign (Phase 11)
 
 Prepared: 2026-10-10, revised 2026-10-11 after the reviewer remediation
 (zoefunds): the live contract was replaced by a financially safer instance;
@@ -6,20 +6,20 @@ see `docs/remediation-plan.md` and `docs/onchain-activity.md`. Everything here
 is **verified against the local repo, the live studio-dev chain, and the
 official docs**. Fields that could **not** be independently confirmed are
 flagged. **No campaign points, addresses, tx hashes, or test results below are
-fabricated** — each is a real artifact of this build.
+fabricated** - each is a real artifact of this build.
 
 ## Rules re-verification status (important)
 
 - The GenLayer Portal (`https://portal.genlayer.foundation/how-it-works`) is the
   live hub: "Deploy Intelligent Contracts, ship projects, and earn Builder
   Points for every accepted contribution." Confirmed via web search 2026-10-10.
-- The **exact point ranges** (Projects 20–4,000; standalone Contracts 0–500) come
+- The **exact point ranges** (Projects 20-4,000; standalone Contracts 0-500) come
   from the interface the campaign brief supplied and remain **not scrapable**
   (the portal is a JS-rendered SPA; `/submit`, `/projects` routes 404 to the
   client). They must be confirmed **in-browser by a human at submission time**.
 - The DoraHacks "Testnet Bradbury" event page (re-surfaced 2026-10-10) still
   states each contract must use **Optimistic Democracy consensus** and an
-  **Equivalence Principle** — both satisfied by every contract here. This is an
+  **Equivalence Principle** - both satisfied by every contract here. This is an
   event-scoped proxy, not necessarily the standing rubric.
 - **Submission is an irreversible action and is NOT performed here.** This
   document is submission-ready content for a human to review and submit; the
@@ -27,14 +27,14 @@ fabricated** — each is a real artifact of this build.
 
 ---
 
-## A. Project — ProofOfPost (RuleRegistry)
+## A. Project - ProofOfPost (RuleRegistry)
 
-**Title:** ProofOfPost — on-chain content-rule adjudication with GenLayer
+**Title:** ProofOfPost - on-chain content-rule adjudication with GenLayer
 
 **Description:** A public registry where posts of literal text are submitted
 against a natural-language rule set and a validator ensemble independently
 re-derives whether each post satisfies the rules, settling a reproducible,
-appealable verdict that gates a bonded payout — slashed collateral stays
+appealable verdict that gates a bonded payout - slashed collateral stays
 reserved against the appeal window until the liability is finalized (swept in a
 completed withdrawal after the minimum window, or appeal budget exhausted).
 
@@ -57,13 +57,14 @@ browser-verified reads against the deployed contract)
 instance, deploy tx `0xfcdf6512…660b6`; supersedes the pre-F7
 `0x405e957542856E5f6830EDD40757480BDA8ab594` and pre-remediation
 `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b`)
-**Network:** GenLayer Studio Devnet — RPC `https://studio-dev.genlayer.com/api` (non-gasless; fee ~0.00008 GEN per settled tx after refund)
+**Network:** GenLayer Studio Devnet - RPC `https://studio-dev.genlayer.com/api` (non-gasless; fee ~0.00008 GEN per settled tx after refund)
 
-**Setup & test instructions:** see repo `README` / `docs/testing.md` —
+**Setup & test instructions:** see repo `README` / `docs/testing.md` -
 `genvm-lint check contracts/rule_registry.py`; `pytest tests/direct -q`
 (44 direct tests); guarded integration suite via `gltest`; full live
 regression `node e2e/studio_devnet_e2e.mjs` (from the `e2e/` dir after
-`npm install`).
+`npm install`); independent evidence re-check `node frontend/verify_evidence.mjs`
+(re-queries every recorded tx against the RPC; currently 22/22 FINALIZED, exit 0).
 **Architecture docs:** `docs/research.md`, `docs/project-decision.md`,
 `docs/deployment.md`, `docs/onchain-activity.md`,
 `docs/remediation-plan.md`.
@@ -71,15 +72,15 @@ regression `node e2e/studio_devnet_e2e.mjs` (from the `e2e/` dir after
 demo; the 2026-10-11 F7 regression on the CURRENT instance settled real
 verdicts, rejected a premature treasury withdrawal on-chain, paid 1 GEN of
 finalized slashed collateral to the configured treasury, refunded a cancelled
-bond, rejected oversized rules, and — critically — proved the previously
+bond, rejected oversized rules, and - critically - proved the previously
 exploitable appeal survives third-party tick-window spam on-chain (full hashes in
 `docs/onchain-activity.md`).
 
 ---
 
-## B. Standalone Intelligent Contract — EvidenceOracle
+## B. Standalone Intelligent Contract - EvidenceOracle
 
-**Title:** EvidenceOracle — bonded, appealable attestations about public web pages
+**Title:** EvidenceOracle - bonded, appealable attestations about public web pages
 
 **Purpose:** turn "this public page says X" into a validator-verified,
 bond-backed on-chain fact that other contracts/frontends can consume.
@@ -92,7 +93,7 @@ LLM answer isn't trustable or disputable.
 the URL and re-derives the verdict; the settled result is reproducible and
 appealable.
 
-**Validation strategy:** comparative custom validator (`gl.vm.run_nondet`) —
+**Validation strategy:** comparative custom validator (`gl.vm.run_nondet`) -
 agree on verdict **exactly** and on any extracted scalar within a **1% integer
 tolerance**; wording is not compared. Classified `[EXPECTED]/[EXTERNAL]/
 [TRANSIENT]/[LLM_ERROR]` errors.
@@ -110,12 +111,12 @@ number appears on the page.
 
 ---
 
-## C. Standalone Intelligent Contract — ScoreRegistry
+## C. Standalone Intelligent Contract - ScoreRegistry
 
-**Title:** ScoreRegistry — consensus rubric scoring with a reproducible pass/fail gate
+**Title:** ScoreRegistry - consensus rubric scoring with a reproducible pass/fail gate
 
 **Purpose:** score free-form work against a natural-language rubric and publish a
-defensible 0–100 score + `PASSED`/`FAILED` gate that gates bonded value.
+defensible 0-100 score + `PASSED`/`FAILED` gate that gates bonded value.
 
 **Problem it solves:** grants/bounties/moderation need subjective work scored
 without one trusted scorer picking the number that releases value; raw LLM
@@ -125,7 +126,7 @@ scoring is unreproducible and hallucinable even on checkable criteria.
 whole generate→evaluate→score procedure and must agree on the settlement gate.
 
 **Validation strategy (hybrid):** comparative custom validator with **two**
-agreements — deterministic sub-checks by **strict equality**, the subjective
+agreements - deterministic sub-checks by **strict equality**, the subjective
 score within a **tolerance band** (`SCORE_TOLERANCE=10`), and the pass/fail gate
 by **exact** match. LLM-generated rubric checks run in a restricted interpreter
 so their outcome cannot be hallucinated.
@@ -192,13 +193,13 @@ tx hashes resolve to `docs/onchain-activity.md` / `e2e/evidence.json`.
 ## Outstanding before submission
 
 1. Human in-browser confirmation of the live Builder point ranges / field schema
-   (portal is a JS SPA — not scrapable from the agent).
+   (portal is a JS SPA - not scrapable from the agent).
 2. Human approval to perform the **irreversible** portal submission (not done here).
 3. **Reviewer sign-off on the F7 appeal-semantics change**: appealability is no
-   longer time-boxed by the lifecycle tick — it continues past the nominal
+   longer time-boxed by the lifecycle tick - it continues past the nominal
    sweep-eligibility window until the liability is finalized by a completed
    paying treasury withdrawal or the two-appeal budget. This is now **deployed and
    live-verified** on `0x30A9A1D8…149E` (the tick-window-spam appeal survives
    on-chain; see `docs/onchain-activity.md`), but remains a protocol-semantic
-   decision awaiting explicit reviewer acceptance — it is not claimed accepted.
+   decision awaiting explicit reviewer acceptance - it is not claimed accepted.
    See `docs/remediation-plan.md` F7.

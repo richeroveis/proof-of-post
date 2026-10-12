@@ -45,7 +45,7 @@ off-chain**:
 
 - A deterministic EVM smart contract **cannot read a web page** and cannot
   decide whether prose supports a statement.
-- A single centralized AI/LLM answer is **not trustworthy and not disputable** —
+- A single centralized AI/LLM answer is **not trustworthy and not disputable** -
   one model's opinion, with no recourse when it is wrong.
 - A traditional oracle (e.g. price feeds) only works for values that have a
   canonical numeric source; free-form textual entailment has none.
@@ -70,7 +70,7 @@ status, verdict_quote, observed_value, reason, challenge_count`. Contract-level
 counters: `supported_total / contradicted_total / unverifiable_total /
 slashed_total / withdrawn_slashed / min_bond / next_id`. IDs are **0-based**.
 
-## 5. Equivalence Principle — comparative, custom validator (justified)
+## 5. Equivalence Principle - comparative, custom validator (justified)
 
 Every `resolve`/`challenge` runs one non-deterministic operation, `_verify`:
 
@@ -85,7 +85,7 @@ Every `resolve`/`challenge` runs one non-deterministic operation, `_verify`:
   - Wording (`quote`, `reason`) is deliberately **not** compared.
 
 Why not the alternatives:
-- `strict_eq` is impossible — pages change between fetches and LLMs paraphrase,
+- `strict_eq` is impossible - pages change between fetches and LLMs paraphrase,
   so full-text equality would never converge.
 - Non-comparative validation would let the **leader decide alone**, defeating the
   purpose of an oracle. Requiring independent re-derivation of the *verdict* is
@@ -179,7 +179,7 @@ Rejected inputs raise classified `[EXPECTED]` errors, e.g. `propose("http://…"
 
 ## 9. Tests
 
-- **Direct (fast, mocked, no network):** `tests/direct/test_evidence_oracle.py` —
+- **Direct (fast, mocked, no network):** `tests/direct/test_evidence_oracle.py` -
   30 tests covering URL/statement/bond validation incl. every SSRF prefix, all
   three verdicts and their accounting, `[EXTERNAL]` 404 and `[TRANSIENT]` 503
   paths, invalid-verdict `LLM_ERROR`, unauthorized/duplicate `resolve`, the full
@@ -195,7 +195,7 @@ Rejected inputs raise classified `[EXPECTED]` errors, e.g. `propose("http://…"
 
 Network: **GenLayer Studio Devnet** (`studio-dev`, Studio Next preview),
 chainId **61997**, RPC `https://studio-dev.genlayer.com/api`. It is **not**
-gasless — each tx needs a non-zero fee deposit (≈0.1 GEN quoted, ~0.00008 GEN
+gasless - each tx needs a non-zero fee deposit (≈0.1 GEN quoted, ~0.00008 GEN
 actually consumed, remainder refunded on finalize).
 
 The contract pins a specific runner and carries the required version preamble;
@@ -210,7 +210,7 @@ runners and a header without the `# v0.2.16` line):
 Lint before deploying: `genvm-lint check standalone/evidence-oracle/contract.py`
 (→ PASS, 10 methods: 5 view / 5 write, ctor_params 1).
 
-**SDK deploy (recommended — fee-aware, never exposes the key):** see
+**SDK deploy (recommended - fee-aware, never exposes the key):** see
 `frontend/deploy_standalone.mjs`. It reads `GENLAYER_PRIVATE_KEY` from `.env`,
 estimates fees, deploys with `args=[min_bond]`, polls until FINALIZED, and
 **recovers the deployed address from the deploy tx's `to_address` /

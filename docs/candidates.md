@@ -1,4 +1,4 @@
-# Phase 2 — Five Candidate Projects (GenLayer Builder)
+# Phase 2 - Five Candidate Projects (GenLayer Builder)
 
 Each candidate is evaluated against the campaign's core test: **why is a plain
 smart contract insufficient, AND why is a centralised AI service insufficient,
@@ -17,7 +17,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 
 ---
 
-## Candidate 1 — **EvenHand** (evidence-adjudicated dispute escrow)
+## Candidate 1 - **EvenHand** (evidence-adjudicated dispute escrow)
 
 1. **Pitch:** Two parties lock a micro-escrow for a peer task ("I'll design your
    logo / translate this doc"); if they disagree on completion, validators read
@@ -35,7 +35,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 6. **GenLayer decides:** did delivery satisfy the agreed terms → release/split/refund.
 7. **Evidence:** delivery artifact (URL/web content), the agreed terms text, optional
    third-party confirmations.
-8. **Equivalence/consensus:** custom validator (`run_nondet_unsafe`) — validator
+8. **Equivalence/consensus:** custom validator (`run_nondet_unsafe`) - validator
    independently re-fetches the same evidence and re-derives the decision; comparative
    agreement on the normalized decision field (`released`/`refunded`/`split_pct`) with
    tolerances. Optimistic Democracy with appeal rotation.
@@ -51,7 +51,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
     lightweight, gasless-network, Python-native, appealable adjudication.
 14. **Plan:** factory+agreement contract → direct tests (state machine, escrow math)
     → integration tests (real evidence eval) → Next.js UI → deploy studio-dev → GH Pages.
-15. **Testability:** excellent — deterministic escrow math testable in direct mode;
+15. **Testability:** excellent - deterministic escrow math testable in direct mode;
     adjudication via integration tests on stable fixtures.
 16. **Repeatable activity:** every real dispute + regression scenario is a genuine tx.
 17. **Review criteria:** strong necessity (money-moving judgment), full product, appeals.
@@ -60,7 +60,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 
 ---
 
-## Candidate 2 — **ProofOfPost** (rule-compliant content registry)
+## Candidate 2 - **ProofOfPost** (rule-compliant content registry)
 
 1. **Pitch:** Creators stake to register content against a natural-language rule set
    (e.g. disclosure/compliance rules); validators check compliance and slash or reward.
@@ -82,7 +82,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 12. **Security:** prompt-injection, ambiguous rules, sybil via bond.
 13. **Diff:** novel framing vs generic "AI moderation."
 14. **Plan:** contract → direct/integration → UI → deploy.
-15. **Testability:** GOOD — the agentic code-gen eval pattern is deterministic-ish;
+15. **Testability:** GOOD - the agentic code-gen eval pattern is deterministic-ish;
     clear fixtures.
 16. **Repeatable:** each registration/check is a tx.
 17. **Review:** solid necessity + settlement; moderate originality.
@@ -90,7 +90,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 
 ---
 
-## Candidate 3 — **OriginLedger** (AI-content provenance adjudication)
+## Candidate 3 - **OriginLedger** (AI-content provenance adjudication)
 
 1. **Pitch:** Publish a claim about a work's origin ("human-made"/"AI-assisted with X")
    backed by evidence; validators assess authenticity into a public, appealable attestation.
@@ -104,18 +104,18 @@ Scores are out of 10 per criterion; weighted total out of 10.
    influential to creators; needs multi-model consensus + appeal.
 6. **GenLayer decides:** normalized authenticity status + confidence bucket.
 7. **Evidence:** artifact text/image URL, metadata, claimant-provided process proof.
-8. **Equivalence:** **comparative** — validator independently re-runs assessment, compares
+8. **Equivalence:** **comparative** - validator independently re-runs assessment, compares
    decision field (status) and score bucket with tolerance; never leader-only format checks.
 9. **On-chain:** attestation registry, status enum-as-str, confidence (scaled u256), appeals.
 10. **Architecture:** `ProvenanceRegistry` (+ optional `Attestor` reputation view).
 11. **FE/BE:** Next.js static explorer + submit + wallet; no backend.
 12. **Security:** adversarial evidence, detector unreliability, defamation/label risk →
     status includes `inconclusive`, appeal path, disclaimers.
-13. **Diff:** high — provenance-by-consensus is fresh; C2PA exists (deterministic signing)
+13. **Diff:** high - provenance-by-consensus is fresh; C2PA exists (deterministic signing)
     but doesn't judge AI-ness; our value is the adjudication + appeal, clearly separated.
 14. **Plan:** registry contract → direct (state, schema) → integration (real assessment on
     fixed fixtures) → UI explorer → deploy.
-15. **Testability:** MEDIUM — authenticity is the flakiest judgment; mitigated by fixed
+15. **Testability:** MEDIUM - authenticity is the flakiest judgment; mitigated by fixed
     fixtures + `inconclusive` tolerance band; consensus may rotate more.
 16. **Repeatable:** every attestation + appeal is a real tx; strong demo resonance.
 17. **Review:** top-tier necessity & timeliness; slightly higher consensus risk.
@@ -124,7 +124,7 @@ Scores are out of 10 per criterion; weighted total out of 10.
 
 ---
 
-## Candidate 4 — **TrueResolution** (appealable prediction-market oracle)
+## Candidate 4 - **TrueResolution** (appealable prediction-market oracle)
 
 1. **Pitch:** Binary/scalar markets resolve on real-world outcomes where validators
    fetch & normalize evidence, with an appeal window instead of a single oracle call.
@@ -143,14 +143,14 @@ Scores are out of 10 per criterion; weighted total out of 10.
 12. **Security:** source manipulation, ambiguous questions, timing attacks.
 13. **Diff:** category is crowded (UMA, Gnosis预测); appealable multi-model is the angle.
 14. **Plan:** contracts → tests → UI → deploy.
-15. **Testability:** GOOD — outcomes from fixed evidence testable in integration.
+15. **Testability:** GOOD - outcomes from fixed evidence testable in integration.
 16. **Repeatable:** real markets + regression resolutions.
 17. **Review:** necessity clear; originality lower due to many prior oracles.
 18. **Risks:** market plumbing volume; MEDIUM complexity, lots of boilerplate money math.
 
 ---
 
-## Candidate 5 — **MeritBounty** (rubric-scored open-bounty settlement)
+## Candidate 5 - **MeritBounty** (rubric-scored open-bounty settlement)
 
 1. **Pitch:** Anyone posts a bounty with a natural-language rubric and escrow;
    contributors submit work; validators score entries against the rubric and the
@@ -174,15 +174,15 @@ Scores are out of 10 per criterion; weighted total out of 10.
 11. **FE/BE:** Next.js static (post, submit, view scores/payouts, appeal); no backend.
 12. **Security:** rubric gaming, prompt-injection in submitted work, sybil submissions
     (submission fee / bond), collusive appeals (appeal bond).
-13. **Diff:** high — most escrow projects do binary dispute; **rubric→multi-entry payout
+13. **Diff:** high - most escrow projects do binary dispute; **rubric→multi-entry payout
     allocation by consensus score** is fresher and shows off comparative validation well.
 14. **Plan:** contracts (deterministic payout math isolated from nondeterministic scoring)
     → direct tests (allocation math, state, access, bonds) → integration tests (real scoring
     on fixed fixtures) → Next.js UI → deploy studio-dev → GH Pages → 2 standalone contracts.
-15. **Testability:** EXCELLENT — payout math is deterministic/unit-testable; scoring isolated
+15. **Testability:** EXCELLENT - payout math is deterministic/unit-testable; scoring isolated
     behind one nondeterministic op with clear fixtures.
 16. **Repeatable:** real bounties + bounded regression scenarios; genuine ecosystem utility.
-17. **Review:** hits every criterion — necessity, settlement effect, appeals, completeness,
+17. **Review:** hits every criterion - necessity, settlement effect, appeals, completeness,
     demonstrable multi-party flows.
 18. **Risks:** rubric ambiguity (mitigated by requiring explicit rubric + gate checks);
     MEDIUM complexity, but cleanly separable (deterministic vs nondeterministic).
@@ -206,7 +206,7 @@ Weights: Nec .25 · Val .20 · Feas .15 · Orig .15 · Sec .10 · Demo .10 · Us
 **MeritBounty** scores highest without manipulating the rubric. Why it wins:
 
 - **Cleanest GenLayer necessity + settlement coupling:** the consensus output (a score)
-  directly drives a deterministic payout allocation — the exact pattern the `write-contract`
+  directly drives a deterministic payout allocation - the exact pattern the `write-contract`
   skill says to prefer (nondeterministic judgment tied to a real state transition/escrow).
 - **Best feasibility/reliability balance:** the risky part (scoring) is isolated behind a
   single comparative nondeterministic op with fixed fixtures; the money math is
@@ -219,7 +219,7 @@ Weights: Nec .25 · Val .20 · Feas .15 · Orig .15 · Sec .10 · Demo .10 · Us
 - **Demonstrable completeness:** multi-party journeys (poster / contributor / appellant) show
   well to reviewers and exercise the full tx lifecycle (pending/accepted/finalized/appeal).
 
-**OriginLedger** is the runner-up — higher raw narrative impact and originality, but the
+**OriginLedger** is the runner-up - higher raw narrative impact and originality, but the
 authenticity judgment is the least reliable for validator consensus, which risks demo
 flakiness. If you prefer narrative boldness over reliability, pick it.
 

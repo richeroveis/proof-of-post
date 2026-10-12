@@ -1,7 +1,7 @@
 # ScoreRegistry
 
 A standalone GenLayer **Intelligent Contract** that turns *"this work is good
-enough"* into a **settled 0–100 score with a public, reproducible pass/fail
+enough"* into a **settled 0-100 score with a public, reproducible pass/fail
 gate**, backed by validator consensus and an appealable bond.
 
 - **Source:** `standalone/score-registry/contract.py` (class `ScoreRegistry`)
@@ -21,11 +21,11 @@ gate**, backed by validator consensus and an appealable bond.
 Grants, bounties, content moderation, assignment review, marketplace listings,
 and contribution rewards all need the same thing: score a piece of free-form
 work against a rubric and publish a **defensible pass/fail decision** that a
-downstream payout or access rule can trust — without a single trusted scorer
+downstream payout or access rule can trust - without a single trusted scorer
 deciding arbitrarily.
 
 `ScoreRegistry` lets a submitter post work + rubric + a pass threshold with a
-bond; validators then produce a 0–100 score and a settled `PASSED`/`FAILED`
+bond; validators then produce a 0-100 score and a settled `PASSED`/`FAILED`
 gate; a failed verdict can be appealed (bounded, staked re-grade).
 
 ## 2. Independent value beyond a main project
@@ -33,8 +33,8 @@ gate; a failed verdict can be appealed (bounded, staked re-grade).
 It is a **reusable scoring/review oracle**, not a feature of one app. Any
 contract or frontend that needs "did this submission clear its rubric gate, and
 with what score?" reads `get_item` / `passes_gate` / `get_score`. It is
-educational on its own because it demonstrates the hardest consensus problem —
-mixing deterministic and subjective evidence — with a **hybrid** equivalence
+educational on its own because it demonstrates the hardest consensus problem -
+mixing deterministic and subjective evidence - with a **hybrid** equivalence
 rule rather than one blunt strategy.
 
 ## 3. Why GenLayer (and not a plain smart contract or an AI API)
@@ -43,7 +43,7 @@ Scoring text against a natural-language rubric is **subjective and
 non-deterministic**, yet the outcome gates real value:
 
 - A deterministic contract cannot judge text quality.
-- A single LLM's score is untrustworthy, unreproducible, and — crucially —
+- A single LLM's score is untrustworthy, unreproducible, and - crucially -
   **hallucinable**: asked to count characters or check keyword presence, models
   get it wrong and disagree with themselves.
 - No party should be able to pick the number that releases a payout.
@@ -61,25 +61,25 @@ consensus bar:
    into a Python boolean expression over `text` (skips subjective lines).
 2. **Deterministic evaluation:** those expressions are run in a **restricted
    interpreter** with a tiny builtins whitelist (`len/any/all/str/int/abs/sum`)
-   and only `text` in scope — so neither leader nor validator can hallucinate
+   and only `text` in scope - so neither leader nor validator can hallucinate
    the outcome, and nothing can import or reach the host. Broken/unsafe
    expressions are **dropped, not guessed**.
-3. **LLM → score:** the model proposes a 0–100 score **with the deterministic
+3. **LLM → score:** the model proposes a 0-100 score **with the deterministic
    results supplied as ground truth it may not contradict**; status is
    `PASSED` iff `score ≥ threshold`.
 
-## 5. Equivalence Principle — comparative, with two agreements (justified)
+## 5. Equivalence Principle - comparative, with two agreements (justified)
 
-The validator independently repeats steps 1–3, then must agree with the leader on:
+The validator independently repeats steps 1-3, then must agree with the leader on:
 
 | Evidence | Agreement rule | Why |
 |---|---|---|
 | Deterministic sub-check map (`index → SATISFIED/VIOLATED`) | **STRICT EQUALITY** (JSON `sort_keys=True` byte-compare) | Same rule must yield the same status map; any divergence is a real defect |
-| Numeric score (0–100) | **TOLERANCE BAND** `SCORE_TOLERANCE = 10` | Raw `strict_eq` on an LLM score never converges; unbounded tolerance lets the leader pick any number |
+| Numeric score (0-100) | **TOLERANCE BAND** `SCORE_TOLERANCE = 10` | Raw `strict_eq` on an LLM score never converges; unbounded tolerance lets the leader pick any number |
 | Pass/fail gate (score ≥ threshold) | **EXACT match** | The gate *is* the settlement a consumer relies on |
 
 This split is the whole point: strict equality is enforced where the evidence is
-deterministic, and only the genuinely subjective part gets a tolerance — while
+deterministic, and only the genuinely subjective part gets a tolerance - while
 the decision that matters (pass/fail) is pinned to exact agreement.
 `strict_eq` on the full LLM output would never reach consensus; pure
 non-comparative validation would let the leader decide alone.
@@ -107,7 +107,7 @@ withdrawn_slashed / min_bond / next_id`. IDs are **0-based**.
 ## 7. Input validation & security controls
 
 - **Payload** non-empty, ≤6000 chars; **rubric** non-empty, ≤3000, capped at
-  `MAX_CHECKS = 20` lines (each ≤300); **title** ≤200; **threshold** must be 0–100.
+  `MAX_CHECKS = 20` lines (each ≤300); **title** ≤200; **threshold** must be 0-100.
 - **Bond gate**: `submit` and `appeal` require `msg.value ≥ min_bond`.
 - **Access control**: only the submitter or owner may `grade`; only the submitter
   may `appeal`; only `FAILED` items may be appealed; `withdraw_slashed` /
@@ -116,7 +116,7 @@ withdrawn_slashed / min_bond / next_id`. IDs are **0-based**.
   work text is framed as **untrusted data** in every prompt and instructed to be
   ignored if it contains instructions.
 - **Defensive number parsing**: `_clamp_score` coerces `"82"`, `82.0`, `82/100`,
-  `82%` and clamps to 0–100 using integer logic.
+  `82%` and clamps to 0-100 using integer logic.
 - **Money safety**: EOA payouts go through an **external** EVM message
   (`_GENReceiver(to).emit_transfer(value=...)`); per-appeal stakes are settled
   individually and a held bond is released only once, so `slashed_total` is never
@@ -173,7 +173,7 @@ Rejected inputs raise `[EXPECTED]` errors, e.g. empty payload
 
 ## 10. Tests
 
-- **Direct (fast, mocked):** `tests/direct/test_score_registry.py` — 24 tests
+- **Direct (fast, mocked):** `tests/direct/test_score_registry.py` - 24 tests
   covering payload/rubric/threshold/bond validation, `grade` PASSED (checks
   generated & all `SATISFIED`) and FAILED slash, a broken `__import__` expression
   being dropped, unauthorized/duplicate grade, the full appeal matrix (flip
@@ -221,7 +221,7 @@ ScoreRegistry is a template for the hardest consensus case: **subjective output
 that must gate value**. It shows how to (a) convert the checkable part of a
 natural-language rubric into deterministically-evaluated code so no model can
 hallucinate it, (b) feed those deterministic results back as ground truth, and
-(c) use a **hybrid** equivalence rule — strict equality on deterministic evidence,
+(c) use a **hybrid** equivalence rule - strict equality on deterministic evidence,
 a tolerance band on the score, exact agreement on the settlement gate. Builders
 implementing on-chain review, grading, or quality-gated payouts can adopt it
 directly or reuse the hybrid-validation technique.

@@ -1,4 +1,4 @@
-# GenLayer Builder Campaign — Phase 1 Research
+# GenLayer Builder Campaign - Phase 1 Research
 
 Verification date: 2026-10-09. All technical claims below were checked against
 official GenLayer documentation, the installed GenLayer skills, or the local
@@ -11,16 +11,16 @@ independently verified is flagged explicitly.
 
 | Item | Status |
 |------|--------|
-| Workspace | `c:\Users\oveis\Project\Richer_Project_1` — initially contained only `.env` |
-| Git repo | **Not present** (no `.git`, no remote) — must be initialised in Phase 6 |
+| Workspace | `c:\Users\oveis\Project\Richer_Project_1` - initially contained only `.env` |
+| Git repo | **Not present** (no `.git`, no remote) - must be initialised in Phase 6 |
 | `.env` variables | `GENLAYER_PRIVATE_KEY` present (66 chars, looks like `0x…` key); `GITHUB_TOKEN` present (40 chars). Values never printed. |
 | Python | 3.13.13 |
 | Node.js / npm | v24.21.0 / 11.19.0 |
 | uv | 0.11.24 |
 | pip | 26.1 |
 | Git | 2.53.0 |
-| GenLayer CLI (`genlayer`) | **Not installed** — needs `npm install -g genlayer` (target version ≥ the CLI that ships the `studio-dev` alias) |
-| GenLayer Python SDK (`genlayer`) | **Not installed** — `pip show genlayer` empty |
+| GenLayer CLI (`genlayer`) | **Not installed** - needs `npm install -g genlayer` (target version ≥ the CLI that ships the `studio-dev` alias) |
+| GenLayer Python SDK (`genlayer`) | **Not installed** - `pip show genlayer` empty |
 | `genvm-linter` / `genlayer-test` | **Not installed** |
 
 Unblocking actions (safe, executable later in the phases): install the CLI,
@@ -48,7 +48,7 @@ without echoing it. None required for the Phase 2 decision.
   custom validator via `gl.vm.run_nondet_unsafe(leader_fn, validator_fn)`.
 - **Errors:** classified with prefixes `[EXPECTED]`, `[EXTERNAL]`, `[TRANSIENT]`,
   `[LLM_ERROR]`; raise `gl.vm.UserError` / `gl.vm.UserError`, never bare `Exception`.
-- **Testing:** three layers — `genvm-lint check` (AST safety + SDK semantics),
+- **Testing:** three layers - `genvm-lint check` (AST safety + SDK semantics),
   direct-mode pytest tests (`genlayer-test` plugin, ~30ms, mocked web/LLM), and
   integration tests (`gltest`, full consensus, real web/LLM).
 - **Client / frontend:** Next.js 15 boilerplate (`genlayer-project-boilerplate`),
@@ -56,7 +56,7 @@ without echoing it. None required for the Phase 2 decision.
 
 ---
 
-## 3. Development network — Studio Next / dev (verified, important)
+## 3. Development network - Studio Next / dev (verified, important)
 
 Official `Network Configuration` doc (last_updated 2026-09-03):
 
@@ -69,7 +69,7 @@ Official `Network Configuration` doc (last_updated 2026-09-03):
 - `studio-next.genlayer.com` is treated as a **web alias** for the same preview;
   keep the canonical SDK/RPC target on `studio-dev`.
 - **Warning:** if `studio-dev` is not listed by `genlayer network list`, the
-  installed CLI/SDK is older than the RC — upgrade to the matching RC. Do **not**
+  installed CLI/SDK is older than the RC - upgrade to the matching RC. Do **not**
   substitute `studionet` (chain ID 61999, different consensus deployment).
 - Studio-dev is **temporary and resets**; do not depend on its state for durable
   deployments. Redeploy + update frontend config must be documented.
@@ -78,7 +78,7 @@ Official `Network Configuration` doc (last_updated 2026-09-03):
 `studio-dev` alias (chain ID 61997), **conditional on an RC-capable CLI/SDK**.
 This must be confirmed with `genlayer network list` / `genlayer network info`
 after install, before any deployment. Whether `studio-dev` is gasless like
-`studionet` is **not yet verified** — needs a check after CLI install.
+`studionet` is **not yet verified** - needs a check after CLI install.
 
 ---
 
@@ -101,7 +101,7 @@ Boundary discipline required per contract:
 - **Frontend/backend owns:** UI, auth, indexing, non-authoritative previews, caching.
 - **Contract owns:** the minimum state transition needing consensus, evidence inputs,
   the validator comparison rule, the settlement effect, appeal/rotation path.
-- **External sources own:** raw facts — untrusted unless validators can re-fetch,
+- **External sources own:** raw facts - untrusted unless validators can re-fetch,
   normalise, and compare them.
 
 Anti-patterns to avoid: `strict_eq` on LLM output; schema-only / leader-only
@@ -111,19 +111,19 @@ validation for classification/scoring decisions.
 
 ---
 
-## 5. Campaign requirements (partially verified — treat ranges as possible, not guaranteed)
+## 5. Campaign requirements (partially verified - treat ranges as possible, not guaranteed)
 
 - The **GenLayer Portal** contribution system lets anyone submit work built on
   GenLayer: shipping a **Project**, submitting a standalone **Intelligent
   Contract**, or improving network operations (validators/stewards). Builders earn
   **Builder Points** per accepted contribution.
-- Point ranges supplied by the user's interface: **Projects 20–4,000**;
-  **standalone Contracts 0–500**. These are **unverified against a stable public
+- Point ranges supplied by the user's interface: **Projects 20-4,000**;
+  **standalone Contracts 0-500**. These are **unverified against a stable public
   source** (the portal front-end is JS-rendered and returned no scrapable rules on
   2026-10-09). Treat as possible ranges only; **re-verify current rules before
   submission (Phase 11).**
 - A recent official event (DoraHacks "Testnet Bradbury" hackathon, submission
-  window ~Mar–Apr 2026) required each project's Intelligent Contract to use
+  window ~Mar-Apr 2026) required each project's Intelligent Contract to use
   **Optimistic Democracy consensus** and an **Equivalence Principle**. This aligns
   with the docs' guidance and is a reasonable proxy for review expectations, but
   it is an event-specific page, not necessarily the standing campaign rubric.
@@ -151,31 +151,31 @@ centralised AI service are both insufficient, to prove GenLayer-necessity.
 
 ## 7. Implementation risks (cross-cutting)
 
-1. **CLI/SDK RC availability** — `studio-dev` needs the matching release candidate;
+1. **CLI/SDK RC availability** - `studio-dev` needs the matching release candidate;
    older installs won't list the alias. Mitigation: verify after install; fall back
    to documented stable flow only with explicit approval.
-2. **Studio-dev resets** — deployments are ephemeral; demo must be redeployable and
+2. **Studio-dev resets** - deployments are ephemeral; demo must be redeployable and
    contract address must be re-injectable into the frontend config.
-3. **Consensus flakiness** — LLM/web non-determinism; mitigated by custom validators,
+3. **Consensus flakiness** - LLM/web non-determinism; mitigated by custom validators,
    stable-field extraction, derived status, error classification, tolerances.
-4. **Rate limits** (hosted Studio) — 60 req/min, 1000/hr, 10000/day; ≤32 in-flight
+4. **Rate limits** (hosted Studio) - 60 req/min, 1000/hr, 10000/day; ≤32 in-flight
    txs/sender. Batch regression must be throttled/paced (Phase 9).
-5. **Prompt injection / untrusted web content** — treat external content adversarially.
-6. **Scraping campaign rules** — portal is JS-rendered; final rules need human/browser
+5. **Prompt injection / untrusted web content** - treat external content adversarially.
+6. **Scraping campaign rules** - portal is JS-rendered; final rules need human/browser
    verification before irreversible submission actions (Phase 11 gate).
 
 ---
 
 ## 8. Sources & verification dates
 
-- Local toolchain probe — 2026-10-09 (versions, `.env` keys, missing GenLayer tools).
+- Local toolchain probe - 2026-10-09 (versions, `.env` keys, missing GenLayer tools).
 - Installed skills (`write-contract`, `genlayer-cli`, `direct-tests`,
-  `integration-tests`, `genvm-lint`, `genlayernode`) — read 2026-10-09.
+  `integration-tests`, `genvm-lint`, `genlayernode`) - read 2026-10-09.
 - https://docs.genlayer.com/developers/intelligent-contracts/deploying/network-configuration
-  (last_updated 2026-09-03) — Studio-dev alias, RPC, chain ID 61997, RC requirement.
-- https://docs.genlayer.com/developers/intelligent-contracts/ideas — contract ideas/boilerplate.
-- https://skills.genlayer.com/ — skills marketplace (install method).
-- https://portal.genlayer.foundation/how-it-works — contribution/points system (JS page,
+  (last_updated 2026-09-03) - Studio-dev alias, RPC, chain ID 61997, RC requirement.
+- https://docs.genlayer.com/developers/intelligent-contracts/ideas - contract ideas/boilerplate.
+- https://skills.genlayer.com/ - skills marketplace (install method).
+- https://portal.genlayer.foundation/how-it-works - contribution/points system (JS page,
   content not fully retrievable 2026-10-09 → flagged for re-verify).
-- https://dorahacks.io/hackathon/genlayer-bradbury/detail — event requirements (Optimistic
+- https://dorahacks.io/hackathon/genlayer-bradbury/detail - event requirements (Optimistic
   Democracy + Equivalence Principle), event-scoped, not confirmed standing rubric.

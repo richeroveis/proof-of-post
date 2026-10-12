@@ -1,8 +1,8 @@
-# ProofOfPost — on-chain content-rule adjudication on GenLayer
+# ProofOfPost - on-chain content-rule adjudication on GenLayer
 
 **ProofOfPost** is a stake-backed content-compliance registry built as a GenLayer
 **Intelligent Contract**. A submitter posts literal text (URLs are judged as
-text — remote content is never fetched) together with an explicit
+text - remote content is never fetched) together with an explicit
 natural-language rule set and a bond; a GenLayer validator ensemble
 **independently re-derives** whether the content satisfies the rules; the contract
 settles a normalized, appealable verdict that drives a real bonded payout
@@ -34,6 +34,24 @@ in [`docs/remediation-plan.md`](docs/remediation-plan.md) with the exact
 regression tests, and every security path above is exercised against the live
 contract in [`docs/onchain-activity.md`](docs/onchain-activity.md).
 
+## Contract lifecycle (state machine)
+
+| Status | Funds state | Permitted transitions (caller) |
+|---|---|---|
+| `PENDING` | bond escrowed in the contract (in `bonded_pending`) | `evaluate` (submitter or owner) -> settled verdict; `cancel_pending` (submitter or owner) -> `CANCELLED` + refund |
+| `COMPLIANT` | bond refunded, entry verified | terminal |
+| `INCONCLUSIVE` | bond refunded, not verified | terminal |
+| `CANCELLED` | bond refunded | terminal |
+| `NON_COMPLIANT` | bond slashed and **reserved** (`reserved_slashed`; `appeal_deadline = settle tick + 4`) | `appeal` (submitter only) while reserved and `appeal_count < 2`: a reversing verdict releases the reservation, un-slashes and refunds; an upheld verdict keeps it reserved; the second upheld appeal exhausts the budget and finalizes the liability. `withdraw_slashed` (owner only) first sweeps reservations whose `appeal_deadline` has elapsed, then pays the treasury only the unreserved portion; swept entries are no longer appealable |
+
+Ledger invariants held after every transition (asserted in tests):
+`slashed_total >= withdrawn_slashed + reserved_slashed`,
+`reserved_slashed == sum of bonds of entries with appeal_deadline > 0`,
+`bonded_pending == sum of PENDING bonds`, and `withdraw_slashed` is capped by
+both the availability figure and the contract's native balance. Every guard
+reverts with a classified `[EXPECTED]` error, and a reverted write rolls back
+atomically on-chain.
+
 ---
 
 ## Why GenLayer (and not a plain contract or an AI API)
@@ -51,7 +69,7 @@ contract here uses **Optimistic Democracy consensus** with an explicit
 ## Architecture boundary
 
 - **Frontend owns:** UI, wallet connect, submission form, non-authoritative
-  preview, registry browsing. It talks to the **real deployed contract** only —
+  preview, registry browsing. It talks to the **real deployed contract** only -
   no mock data or simulated transactions.
 - **Contract owns:** bond custody, the minimum state transition needing consensus
   (the verdict), evidence inputs, the validator comparison rule, the settlement
@@ -73,12 +91,12 @@ reservation, not the counter: anyone could burn ticks with cheap self-canceling
 writes, so an entry stays appealable while its bond is still reserved and only
 loses that right when the liability is truly finalized (appeal cap exhausted,
 or a sweep inside a completed, paying withdrawal). A stuck
-PENDING bond is recovered with `cancel_pending()` — safe without a timer because
+PENDING bond is recovered with `cancel_pending()` - safe without a timer because
 `evaluate` and `cancel` serialize through atomic finalization (the loser reverts
 with `[EXPECTED] Entry not pending`). See `docs/remediation-plan.md`.
 
 **Limits are enforced by rejection, never truncation**: ≤ 30 rules × 300 chars,
-title ≤ 200, content ≤ 8000 — the rules the validators judge are exactly the
+title ≤ 200, content ≤ 8000 - the rules the validators judge are exactly the
 rules the submitter stored. `withdraw_slashed(amount)` pays only to the
 configured treasury. An appeal re-runs the same assessment on the same stored
 evidence; no new evidence can be attached.
@@ -102,11 +120,11 @@ distinct validation strategies), each fully documented with use case, why
 GenLayer, justified equivalence principle, security controls, example calls with
 expected outcomes, tests, and a deployment procedure.
 
-- **[EvidenceOracle](standalone/evidence-oracle/README.md)** — bonded, appealable
+- **[EvidenceOracle](standalone/evidence-oracle/README.md)** - bonded, appealable
   attestations about public web pages. Comparative validator agrees on the verdict
   exactly and on any extracted scalar within a 1% integer tolerance; SSRF-hardened
   fetcher; classified errors for consensus on failure paths. **30 direct tests.**
-- **[ScoreRegistry](standalone/score-registry/README.md)** — consensus rubric
+- **[ScoreRegistry](standalone/score-registry/README.md)** - consensus rubric
   scoring with a reproducible pass/fail gate. **Hybrid** equivalence: deterministic
   LLM-generated checks evaluated in a restricted interpreter under **strict
   equality**, the subjective score within a **tolerance band**, and the pass/fail
@@ -124,7 +142,7 @@ genvm-lint check contracts/rule_registry.py
 genvm-lint check standalone/evidence-oracle/contract.py
 genvm-lint check standalone/score-registry/contract.py
 
-# fast direct mode tests (mocked web/LLM, no network) — 41 + 54 pass
+# fast direct mode tests (mocked web/LLM, no network) - 41 + 54 pass
 pytest tests/direct -q
 pytest standalone/evidence-oracle/tests/direct standalone/score-registry/tests/direct -q
 
@@ -137,18 +155,18 @@ RUN_INTEGRATION=1 gltest standalone/evidence-oracle/tests/integration -v -s
 See [`frontend/README.md`](frontend/README.md). Reads use `gen_call` view calls;
 writes are signed locally in the browser with a **studio-dev-only** key (never a
 mainnet key), attach an estimated non-zero fee, and poll the tx lifecycle to
-`FINALIZED` before re-reading — because the validator verdict, not the tx hash,
+`FINALIZED` before re-reading - because the validator verdict, not the tx hash,
 decides whether a bond is refunded or slashed.
 
 ## Documentation
 
-- [`docs/remediation-plan.md`](docs/remediation-plan.md) — reviewer findings → fixes → regression tests
-- [`docs/research.md`](docs/research.md) — campaign/network/tooling research
-- [`docs/project-decision.md`](docs/project-decision.md) — approved scope & consensus design
-- [`docs/deployment.md`](docs/deployment.md) — studio-dev operational findings (fees, runner header, EOA payouts)
-- [`docs/onchain-activity.md`](docs/onchain-activity.md) — bounded real-transaction regression record
-- [`docs/testing.md`](docs/testing.md) — test strategy
-- [`docs/submission.md`](docs/submission.md) — submission-ready descriptions
+- [`docs/remediation-plan.md`](docs/remediation-plan.md) - reviewer findings → fixes → regression tests
+- [`docs/research.md`](docs/research.md) - campaign/network/tooling research
+- [`docs/project-decision.md`](docs/project-decision.md) - approved scope & consensus design
+- [`docs/deployment.md`](docs/deployment.md) - studio-dev operational findings (fees, runner header, EOA payouts)
+- [`docs/onchain-activity.md`](docs/onchain-activity.md) - bounded real-transaction regression record
+- [`docs/testing.md`](docs/testing.md) - test strategy
+- [`docs/submission.md`](docs/submission.md) - submission-ready descriptions
 
 ## Security
 
@@ -165,7 +183,7 @@ decides whether a bond is refunded or slashed.
   writes, not wall-clock time (the pinned runner exposes no timestamp/block API)
   and now bounds only when a treasury withdrawal MAY sweep the reservation; the
   right to appeal continues past that tick until the liability is actually
-  finalized — a completed paying withdrawal or the two-appeal budget being
+  finalized - a completed paying withdrawal or the two-appeal budget being
   exhausted. This is a deliberate protocol-semantic change (see
   `docs/remediation-plan.md`, F7): it is now deployed and **live-verified on
   `0x30A9A1D8…d149E`** (the tick-window-spam appeal survives on-chain), but it

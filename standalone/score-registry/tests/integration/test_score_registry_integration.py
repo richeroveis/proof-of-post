@@ -6,7 +6,7 @@ validation, the bond gate, submit -> PENDING registration, the appeal preconditi
 (only a settled FAILED item is appealable), and the views.
 
 The `grade` score itself comes from an LLM and is intentionally not pinned to an
-exact number here — a real score is not reproducible. The hybrid pipeline
+exact number here - a real score is not reproducible. The hybrid pipeline
 (LLM-generated checks -> deterministic eval -> scored verdict) and the tolerance
 band are exercised in the direct-mode suite.
 

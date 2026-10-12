@@ -1,16 +1,24 @@
-# On-chain regression activity — studio-dev
+# On-chain regression activity - studio-dev
 
 Real transactions against deployed RuleRegistry instances, chosen to cover
 every write path and the money that moves with it. Nothing here is mocked;
 every hash below is queryable on `studio-dev` (chain ID 61997) at
 https://studio-dev.genlayer.com/api.
 
-## F7 + withdraw-hardening regression 2026-10-11 — `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
+## F7 + withdraw-hardening regression 2026-10-11 - `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (structured evidence in
 `e2e/evidence.json`, raw `raw` fields stripped). Distinct wallets: owner/deployer
 = repo studio-dev key; submitter + treasury = throwaway in-memory keys (never
 persisted). Every hash is FINALIZED and queryable on studio-dev (chain 61997).
+
+Independent re-check: `node frontend/verify_evidence.mjs` re-queries every
+recorded hash directly against the RPC (no reliance on the driver's own log),
+asserts the rejection payloads (`Collateral reserved for appeal window`,
+`Too many rules`, `Entry not pending`), asserts the F7 appeal shows no
+expiry-refusal payload, and snapshots live `get_stats`. Re-run 2026-10-12:
+22/22 txs FINALIZED, all expectations met, exit 0; live ledger matches the
+conservation invariant below.
 
 | # | Call | Tx | Outcome |
 |---|---|---|---|
@@ -19,24 +27,24 @@ persisted). Every hash is FINALIZED and queryable on studio-dev (chain 61997).
 | 2 | `set_treasury` | `0x100d98bb5083efcce228649c745503600ca02aaa88c947e5d433d962c76ea8e7` | treasury `0x754238CA…1Cda` configured |
 | 3 | R `evaluate` (≤10-word Jupiter post) | `0xd8cb28e2e6256d425d9e3ee3e9f222dc184c421ed1ed123fb936fdd8663f99bb` | **COMPLIANT**, refunded, `verified=1` |
 | 4 | B `evaluate` (Spanish + URL) | `0xe13fd5bb1b28a5b6f856d2f887b34fe5c08a1ad4ceae64d608e2b5b33832bace` | **NON_COMPLIANT**, `slashed=1 reserved=1 available=0` |
-| 5 | **premature** `withdraw_slashed(1)` | `0x98ddb8f1edccf68994c34fa073e280f17cb7ee1817fdc3de59d62eb58d367687` | **REJECTED** — `[EXPECTED] Collateral reserved for appeal window`; ledger unchanged (F1 live) |
+| 5 | **premature** `withdraw_slashed(1)` | `0x98ddb8f1edccf68994c34fa073e280f17cb7ee1817fdc3de59d62eb58d367687` | **REJECTED** - `[EXPECTED] Collateral reserved for appeal window`; ledger unchanged (F1 live) |
 | 6 | B `appeal` #1 | `0x9579e160f9f4e8e472b71e1372ee726bcc893e4fd432f10de0756e32f2291b74` | upheld; still reserved |
 | 7 | B `appeal` #2 | `0xfcd2635125d5d1120b0e5f2934c78dcd30ade31e6f4ff339340fb6d18b4ec781` | upheld; cap → exhausted: `reserved=0 available=1` |
 | 8 | `withdraw_slashed(1)` | `0x69faad85301486db1ea213e81f24623d7ce6787fe60836a2e6fce43c63d4c7ce` | **treasury 0 → 1 GEN** via external message (F5 live); `withdrawn=1` |
 | 9 | C `cancel_pending` | `0xf862edf88930b5a5e186160464c632598f128025f01056decda41a920ad34209` | **CANCELLED**; submitter 1.199 → 2.199 GEN (F2 live) |
-| 10 | C late `evaluate` | (rejected) | stays CANCELLED — `Entry not pending`; no double settle |
-| 11 | 31-rule `submit` | (rejected) | **REJECTED** — `Too many rules`; `total` unchanged (F3 live) |
+| 10 | C late `evaluate` | (rejected) | stays CANCELLED - `Entry not pending`; no double settle |
+| 11 | 31-rule `submit` | (rejected) | **REJECTED** - `Too many rules`; `total` unchanged (F3 live) |
 | 12 | F7 `evaluate` (Spanish + URL) | `0xdd15d77d7f9e843fd07d48bed06d0dafe6965bb63585f19c3c62b89dd1e5254c` | **NON_COMPLIANT**, reserved, `appeal_deadline=16` |
-| 13 | F7 window burn (submit+cancel ×2) | see `evidence.json` | tick 12 → 16 (past deadline); **`reserved` still 1 — tick advance did NOT finalize** |
-| 14 | **F7 `appeal` after window burn** | see `evidence.json` | **FINALIZED, `appeal_count=1`** — appeal SURVIVED the burned tick window; **not** refused by `liability finalized` (F7 live — the pre-F7 counter-gate reverted here) |
+| 13 | F7 window burn (submit+cancel ×2) | see `evidence.json` | tick 12 → 16 (past deadline); **`reserved` still 1 - tick advance did NOT finalize** |
+| 14 | **F7 `appeal` after window burn** | see `evidence.json` | **FINALIZED, `appeal_count=1`** - appeal SURVIVED the burned tick window; **not** refused by `liability finalized` (F7 live - the pre-F7 counter-gate reverted here) |
 
 Final ledger: `total=6 verified=1 slashed=2 withdrawn=1 reserved=1 available=0
-bonded_pending=0 contract_balance=1` — the residual 1 GEN is exactly the F7
+bonded_pending=0 contract_balance=1` - the residual 1 GEN is exactly the F7
 entry's still-reserved, still-appealable bond. Invariants **I1/I4/I6 all true**.
 
 **What was NOT demonstrated live:** a verdict-*reversing* appeal with an on-chain
 refund. R was COMPLIANT up front, B stayed NON_COMPLIANT through both appeals,
-and the F7 appeal was upheld — the shared validator ensemble did not flip any of
+and the F7 appeal was upheld - the shared validator ensemble did not flip any of
 them, and consensus cannot be forced without fabricating results. The
 reversal/un-reserve/refund transition is proven deterministically in direct tests
 (`test_appeal_flips_non_compliant_to_compliant`,
@@ -45,7 +53,7 @@ reversal/un-reserve/refund transition is proven deterministically in direct test
 refund). Residual devnet state (the F7 entry's reserved 1 GEN and the throwaway
 keys) dies with the ephemeral studio-dev reset.
 
-## Remediation regression 2026-10-11 (earlier, pre-F7) — `0x405e957542856E5f6830EDD40757480BDA8ab594`
+## Remediation regression 2026-10-11 (earlier, pre-F7) - `0x405e957542856E5f6830EDD40757480BDA8ab594`
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (raw evidence in
 `e2e/evidence.json`, `e2e/e2e.log`), plus two focused reversal attempts
@@ -63,19 +71,19 @@ leftover devnet dust swept back to the owner where the key was still live).
 | 4 | R `evaluate` | `0xaf4fbb5765b66ac2a8cff5eb7fea654f8a30995dc7ab3f8c724541e9e97a67ee` | **COMPLIANT**, bond refunded, `verified=1` |
 | 5 | B `submit` (Spanish + URL vs English/no-URL) | `0x89a4edd4944cb0943185307acbd39e5ef0531d9f814dd259e562959cd54edb9b` | entry 1 PENDING |
 | 6 | B `evaluate` | `0xe6459c728abae77e0101a04c94f1470c46b6ac94e353c1da95d69fd6208c2502` | **NON_COMPLIANT**; `slashed_total=1`, `reserved=1`, `available=0` |
-| 7 | **premature** `withdraw_slashed(1)` | `0x1f76692e8eae3f86e75e21c5db681865a895e88baea0a2e428f8184b646edeae` | **REJECTED** — consensus surfaced `[EXPECTED] Collateral reserved for appeal window`; ledger unchanged |
+| 7 | **premature** `withdraw_slashed(1)` | `0x1f76692e8eae3f86e75e21c5db681865a895e88baea0a2e428f8184b646edeae` | **REJECTED** - consensus surfaced `[EXPECTED] Collateral reserved for appeal window`; ledger unchanged |
 | 8 | B `appeal` #1 | `0xb1f25a1fa1b54cc27672c895c951e465dafc6db69da72fca608f2f325dee2cea` | upheld; still reserved (`appeals=1`) |
 | 9 | B `appeal` #2 | `0xcf945a3d48c5f6712f3aaabb21c8e34add8302a44294b50af71dd4043582854b` | upheld; count cap → liability exhausted: `reserved=0`, `available=1` |
 | 10 | `withdraw_slashed(1)` | `0xf8bf5a7bceda188cc4979d74a2f55a5e8e91888baab8fc03c4b3801bc58db4cd` | **treasury wallet 0 → 1 GEN** (external message), `withdrawn=1`, contract balance 0 |
 | 11 | C `submit` | `0xf7a7031f940f80dced83b940279593d6d1cb8d8ff57d039aeb775d34f26740c4` | entry 2 PENDING |
 | 12 | C `cancel_pending` | `0xa7793daeed7619e8703a1414e8fc2e271c4942ab79538bb5187f0fd825950dbe` | **CANCELLED**; submitter 1.199 → 2.199 GEN (bond recovered) |
-| 13 | C late `evaluate` | `0x27d93aae9015ea60ff246f2b6d33d7c332e2b33ae5eaede6aa6bd59ccda9d1f5` | **REJECTED** — `[EXPECTED] Entry not pending`; status stays CANCELLED |
-| 14 | 31-rule `submit` | `0x51fe4c987231487ca3264d61895699f6c3d2055f6fc893cac1fed42deac4b6b5` | **REJECTED** — `[EXPECTED] Too many rules`; `total` unchanged (no truncation) |
+| 13 | C late `evaluate` | `0x27d93aae9015ea60ff246f2b6d33d7c332e2b33ae5eaede6aa6bd59ccda9d1f5` | **REJECTED** - `[EXPECTED] Entry not pending`; status stays CANCELLED |
+| 14 | 31-rule `submit` | `0x51fe4c987231487ca3264d61895699f6c3d2055f6fc893cac1fed42deac4b6b5` | **REJECTED** - `[EXPECTED] Too many rules`; `total` unchanged (no truncation) |
 | 15 | F `evaluate` (sentence-count edge case) | `0xba123d592d99f4bb01efc8a7f5890e6f96d47ab16867ee8a57f186876a28343d` | entry 4 **NON_COMPLIANT**, reserved, deadline tick 18 |
 | 16 | F `appeal` | `0xccd0d2bab72ceeedf5227b3d369173bcf66f5925e4775b4effcaf70f88412a09` | upheld (`appeals=1`, still reserved) |
 
 Final ledger after step 14: `total=3 verified=1 slashed=1 withdrawn=1 reserved=0
-available=0 bonded_pending=0 contract_balance=0` — all conservation invariants
+available=0 bonded_pending=0 contract_balance=0` - all conservation invariants
 (I1/I4/I6) true; balances: owner 164.8, submitter 2.199, treasury 1.0 GEN.
 
 **What was NOT demonstrated live:** a verdict-*reversing* appeal with refund.
@@ -89,14 +97,14 @@ refund *mechanism* itself was demonstrated twice (steps 4 and 12).
 
 **Residual devnet state:** entry 4's 1 GEN remains reserved in the ephemeral
 studio-dev instance (its appeal window expires after 2 more settled writes);
-the throwaway submitter/treasury keys were not persisted, so that GEN — like
-everything on this chain — dies with the network reset. No mainnet value exists
+the throwaway submitter/treasury keys were not persisted, so that GEN - like
+everything on this chain - dies with the network reset. No mainnet value exists
 anywhere in this run.
 
 ## Phase 9 record (pre-remediation instance)
 
 Tooling: `genlayer-js` 2.0.0-rc.1 with the built-in `studioDevnet` chain. Every
-write is fee-aware — `client.estimateTransactionFees()` supplies the
+write is fee-aware - `client.estimateTransactionFees()` supplies the
 `distribution` + `feeValue` that `writeContract` attaches, the same flow the
 official CLI uses. The CLI itself cannot be used for these writes: `genlayer
 write` has no `--value` flag, so the payable `submit` is unreachable from it.
@@ -123,7 +131,7 @@ Settlement ledger observed through `get_stats` plus the signer's GEN balance:
 
 Verdicts came from validator consensus, not from the client: each `evaluate`
 ran the LLM compliance prompt inside `run_nondet` with an independent
-comparative re-derivation, and the settled verdicts match the rule text —
+comparative re-derivation, and the settled verdicts match the rule text -
 entry 0 satisfied all three rules, entry 1 violated "must be written in
 English" and "must not contain any URL".
 
@@ -145,11 +153,11 @@ with that bug, because direct mode does not model native transfers. Switching
 |---|---|---|
 | `submit` (payable) | `0xf964f9e6c7fdec4f968ae17b059d979fe5a64faeabad94a4f58c052af9260db5` | FINALIZED, entry 0 created, 1 GEN bonded |
 | `submit` (payable) | `0x769c595161d049ac59cb031380ef860588e54dc03cd6d6539fe3bc0d0aaf6d45` | FINALIZED, entry 1 created, 1 GEN bonded |
-| `evaluate(1)` while only entry 0 existed | `0x40faacad2da87e64d52d811d06088e1152a5592211c34c33bea5a681cf8be7cf` | FINALIZED with `[EXPECTED] No such entry` — all validators returned the same classified error |
+| `evaluate(1)` while only entry 0 existed | `0x40faacad2da87e64d52d811d06088e1152a5592211c34c33bea5a681cf8be7cf` | FINALIZED with `[EXPECTED] No such entry` - all validators returned the same classified error |
 | `evaluate(2)` | `0x4111943a36f63c8be140f29e31354fcd466884958c55e4382132ac6445db7aba` | same deterministic rejection path |
-| `set_treasury(deployer)` | `0xd9c17a6ee478090175f3c98d454d5c6c0ce251b548d5b6b329454afd0ec37881` | FINALIZED, SUCCESS — a `str` address argument passes cleanly through the SDK, unlike via `genlayer deploy --args` |
-| `evaluate(0)` | — | COMPLIANT, verdict recorded (`verified=1`), refund lost (see above) |
-| `evaluate(1)` / `withdraw_slashed` | — | NON_COMPLIANT + slash recorded, GEN never left the contract |
+| `set_treasury(deployer)` | `0xd9c17a6ee478090175f3c98d454d5c6c0ce251b548d5b6b329454afd0ec37881` | FINALIZED, SUCCESS - a `str` address argument passes cleanly through the SDK, unlike via `genlayer deploy --args` |
+| `evaluate(0)` | - | COMPLIANT, verdict recorded (`verified=1`), refund lost (see above) |
+| `evaluate(1)` / `withdraw_slashed` | - | NON_COMPLIANT + slash recorded, GEN never left the contract |
 
 Entry ids are 0-based (`next_id` starts at `0`), which is why the first pass's
 `evaluate(1)` / `evaluate(2)` calls hit the not-found guard. That turned into
@@ -166,7 +174,7 @@ window for a non-validator EOA, so the *protocol* rotation path
 The regression therefore covers the contract's own appeal write instead: on the
 first instance `appeal(1)` (`0x4927af9bd38cb68733fd0a80a9a4c7f1040044f6c281fa9fb0a0c0bd94bfb703`)
 finalized, re-ran consensus, kept `NON_COMPLIANT`, and incremented
-`appeal_count` to 1 — the bounded re-adjudication path works end to end.
+`appeal_count` to 1 - the bounded re-adjudication path works end to end.
 
 ## Cost
 

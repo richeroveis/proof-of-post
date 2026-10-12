@@ -2,7 +2,7 @@
 
 Under full leader+validator consensus these verify what direct mode cannot: that
 the contract deploys on the actual GenVM and its deterministic surface agrees
-across validators — input/URL validation, the SSRF guard, the bond gate, the
+across validators - input/URL validation, the SSRF guard, the bond gate, the
 propose -> resolve state machine's *terminal* transitions, access control, and
 the views.
 

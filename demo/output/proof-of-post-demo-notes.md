@@ -1,4 +1,4 @@
-# ProofOfPost Demo Video — Production Notes
+# ProofOfPost Demo Video - Production Notes
 
 > **HISTORICAL RECORDING.** This video was captured against the pre-remediation
 > contract instance `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b` (devnet chain
@@ -31,7 +31,7 @@ recording), `../capture/shots/*.png` (per-step stills),
   RPC `https://studio-dev.genlayer.com/api`
 - Contract: `RuleRegistry` at `0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b`
 - Live app: `https://richeroveis.github.io/proof-of-post` (HTTP 200; live chain
-  reads confirmed before recording — get_stats / list_entries returned real data)
+  reads confirmed before recording - get_stats / list_entries returned real data)
 - Signer: the repo's `.env` studio-dev-only key, connected through the site's
   masked password field. The key is dots-only in the recording (QC-verified on
   extracted frames); no secret, personal data, or seed phrase appears anywhere.
@@ -40,7 +40,7 @@ recording), `../capture/shots/*.png` (per-step stills),
 
 1. Opening the live dashboard; hero, network line, and live stats
    (Total 2 / Verified 1 / Min bond 1 GEN / Slashed 1 GEN / Balance 0).
-2. Signer connect — in-browser local signing (no extension wallet; the app's
+2. Signer connect - in-browser local signing (no extension wallet; the app's
    documented model), fee quote and signer balance surfaced by the UI.
 3. Filling the form: title, content, three natural-language rules, 1 GEN bond.
 4. `submit` (payable) → tx
@@ -50,7 +50,7 @@ recording), `../capture/shots/*.png` (per-step stills),
    `0x0b341d87c6e2fc101a73f08b0b799fbb5137ca901c355796752f96a340582ea0` →
    **FINALIZED** (real wait ≈ 100 s). Post-consensus chain read: entry #2
    **COMPLIANT**, all three rules SATISFIED, `verified` 1→2, contract balance
-   back to 0 — the 1 GEN bond was refunded via the external-message payout.
+   back to 0 - the 1 GEN bond was refunded via the external-message payout.
 6. `appeal(#1)` on the pre-existing NON_COMPLIANT entry → tx
    `0x9435353f860468528e3198dbad50916276aacd8e4b030e7d12015775bd09d778` →
    **FINALIZED** (real wait ≈ 100 s). Post-consensus chain read: entry #1
@@ -60,22 +60,22 @@ recording), `../capture/shots/*.png` (per-step stills),
 
 ## Editing honesty
 
-- The three consensus waits (70–100 s each of real, unmodified recording) were
-  time-compressed to 4–5 s in the final cut; the subtitles state the exact
+- The three consensus waits (70-100 s each of real, unmodified recording) were
+  time-compressed to 4-5 s in the final cut; the subtitles state the exact
   speed-up factor for each. No frames were faked or skipped within actions.
 - Background music is a self-generated ambient bed (no third-party assets).
 - Opening/closing cards contain only the real project links and contract address.
 
 ## Skipped / not demonstrated
 
-- **INCONCLUSIVE** settlement path — not exercised (would require content whose
+- **INCONCLUSIVE** settlement path - not exercised (would require content whose
   rules are unverifiable; not attempted to avoid extra bonded transactions).
-- `withdraw_slashed` / `set_treasury` (owner ops) — documented in
+- `withdraw_slashed` / `set_treasury` (owner ops) - documented in
   `docs/onchain-activity.md` with real hashes, but not in this video.
-- **Protocol-level** appeal (`appealTransaction`) — per the docs, studio-dev
+- **Protocol-level** appeal (`appealTransaction`) - per the docs, studio-dev
   exposes no open appeal window for a non-validator EOA; the video shows the
   contract-level `appeal()` write instead, which is what the UI implements.
-- The standalone EvidenceOracle / ScoreRegistry contracts — out of scope here.
+- The standalone EvidenceOracle / ScoreRegistry contracts - out of scope here.
 
 ## Discrepancies noticed (live app vs docs / repo)
 
@@ -87,14 +87,14 @@ recording), `../capture/shots/*.png` (per-step stills),
   method name; the deployed RuleRegistry exposes `list_entries`.
 - The UI's fee quote displayed as `0.100000000000010352 GEN` (a raw deposit
   amount, formatted with float-ish noise); docs describe the real charged fee
-  as ≈0.00008 GEN per settled tx with the deposit refunded — consistent with
+  as ≈0.00008 GEN per settled tx with the deposit refunded - consistent with
   the signer balance moving only ~0.0005 GEN across all three writes.
 
 ## Validation performed after render
 
 - `ffprobe`: 1920x1080, h264 yuv420p, 25 fps, AAC audio, duration 69.08 s.
 - Frames extracted at intro, signer connect (masking check), consensus wait,
-  verdict detail, and end card — subtitles legible, positioned bottom-center
+  verdict detail, and end card - subtitles legible, positioned bottom-center
   with dark box, not covering the demonstrated UI.
 - Post-recording read-only chain verification of all three outcomes above
   (`get_stats`, `get_entry(1)`, `get_entry(2)`).

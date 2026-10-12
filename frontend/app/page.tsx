@@ -45,7 +45,7 @@ function validateSubmission(title: string, content: string, rulesBlob: string): 
 }
 
 function shortAddr(a?: string) {
-  if (!a) return "—";
+  if (!a) return "-";
   return a.length > 14 ? `${a.slice(0, 8)}…${a.slice(-6)}` : a;
 }
 
@@ -61,7 +61,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
-  // signer (in-memory only — never persisted, never sent anywhere raw)
+  // signer (in-memory only - never persisted, never sent anywhere raw)
   const [pkInput, setPkInput] = useState("");
   const [signer, setSigner] = useState<ReturnType<typeof createAccount> | null>(null);
 
@@ -126,7 +126,7 @@ export default function Dashboard() {
   }
 
   // Run a write, then wait for the protocol to reach a terminal lifecycle state
-  // before re-reading contract state — a tx hash alone says nothing about the
+  // before re-reading contract state - a tx hash alone says nothing about the
   // validator verdict.
   async function runWrite(label: string, fn: () => Promise<any>) {
     if (!signer) throw new Error("Connect a signer first.");
@@ -216,12 +216,12 @@ export default function Dashboard() {
         <h1>ProofOfPost · RuleRegistry</h1>
         <p>
           A stake-backed content-compliance registry. Submitters post LITERAL TEXT (URLs are judged
-          as text — remote content is never fetched) with an explicit rule set and a GEN bond;
+          as text - remote content is never fetched) with an explicit rule set and a GEN bond;
           GenLayer validators independently judge compliance and the contract settles the verdict
-          on-chain — refunding the bond on COMPLIANT / INCONCLUSIVE and slashing it on
+          on-chain - refunding the bond on COMPLIANT / INCONCLUSIVE and slashing it on
           NON_COMPLIANT. Slashed bonds stay RESERVED and the verdict stays APPEALABLE while the
           reservation holds; the liability is finalized only when the two-appeal budget runs out
-          or when a treasury withdrawal sweeps it after the minimum reservation window — counted
+          or when a treasury withdrawal sweeps it after the minimum reservation window - counted
           in lifecycle writes, not wall-clock time (the pinned runner has no timestamp API).
         </p>
         <div className="netline">
@@ -244,16 +244,16 @@ export default function Dashboard() {
 
       <section>
         <div className="grid stats">
-          <div className="card"><div className="label">Total entries</div><div className="value">{stats?.total ?? "—"}</div></div>
-          <div className="card"><div className="label">Verified</div><div className="value">{stats?.verified ?? "—"}</div></div>
-          <div className="card"><div className="label">Min bond (GEN)</div><div className="value">{stats ? minBond : "—"}</div></div>
-          <div className="card"><div className="label">Slashed (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.slashed_total)) : "—"}</div></div>
-          <div className="card"><div className="label">Reserved (appealable)</div><div className="value">{stats ? formatEther(BigInt(stats.reserved_slashed)) : "—"}</div></div>
-          <div className="card"><div className="label">Treasury-available</div><div className="value">{stats ? formatEther(BigInt(stats.available_slashed)) : "—"}</div></div>
-          <div className="card"><div className="label">Contract balance (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.contract_balance)) : "—"}</div></div>
+          <div className="card"><div className="label">Total entries</div><div className="value">{stats?.total ?? "-"}</div></div>
+          <div className="card"><div className="label">Verified</div><div className="value">{stats?.verified ?? "-"}</div></div>
+          <div className="card"><div className="label">Min bond (GEN)</div><div className="value">{stats ? minBond : "-"}</div></div>
+          <div className="card"><div className="label">Slashed (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.slashed_total)) : "-"}</div></div>
+          <div className="card"><div className="label">Reserved (appealable)</div><div className="value">{stats ? formatEther(BigInt(stats.reserved_slashed)) : "-"}</div></div>
+          <div className="card"><div className="label">Treasury-available</div><div className="value">{stats ? formatEther(BigInt(stats.available_slashed)) : "-"}</div></div>
+          <div className="card"><div className="label">Contract balance (GEN)</div><div className="value">{stats ? formatEther(BigInt(stats.contract_balance)) : "-"}</div></div>
           <div className="card"><div className="label">Owner</div><div className="value" style={{ fontSize: 14 }}>{shortAddr(stats?.owner)}</div></div>
           <div className="card"><div className="label">Treasury</div><div className="value" style={{ fontSize: 14 }}>{shortAddr(stats?.treasury)}</div></div>
-          <div className="card"><div className="label">Lifecycle tick</div><div className="value">{stats?.tick ?? "—"}</div></div>
+          <div className="card"><div className="label">Lifecycle tick</div><div className="value">{stats?.tick ?? "-"}</div></div>
         </div>
         <div className="actions" style={{ marginTop: 12 }}>
           <button onClick={refresh} disabled={loading || notDeployed}>{loading ? "Refreshing…" : "Refresh"}</button>
@@ -270,12 +270,12 @@ export default function Dashboard() {
           </div>
         )}
         <div className="notice">
-          <strong>Costs:</strong> studio-dev is not gasless — each write carries a network fee deposit
+          <strong>Costs:</strong> studio-dev is not gasless - each write carries a network fee deposit
           {feeGen ? <> (currently <code>{feeGen} GEN</code>, quoted by the node per transaction)</> : <> quoted by the node per transaction</>},
           paid by the signer on top of the bond. {signerBalance !== null && (
             <>Signer balance: <code>{signerBalance} GEN</code>.</>
           )}
-          {pending && <> <strong>{pending}</strong> is in validator consensus — a verdict usually lands within a couple of minutes.</>}
+          {pending && <> <strong>{pending}</strong> is in validator consensus - a verdict usually lands within a couple of minutes.</>}
         </div>
         <div className="form">
           <label>Signer private key (in-memory)</label>
@@ -288,10 +288,10 @@ export default function Dashboard() {
             )}
           </div>
 
-          <label>Title (max {MAX_TITLE_LEN} chars — rejected, never truncated)</label>
+          <label>Title (max {MAX_TITLE_LEN} chars - rejected, never truncated)</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title (max 200)" />
 
-          <label>Content — literal text only (URLs are judged as text; nothing is fetched)</label>
+          <label>Content - literal text only (URLs are judged as text; nothing is fetched)</label>
           <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="The post to be judged (max 8000 chars)" />
 
           <label>Rules (one per line, natural language; max {MAX_RULES} × {MAX_RULE_LEN} chars)</label>
@@ -343,7 +343,7 @@ export default function Dashboard() {
           <div className="detail">
             <div className="small">Submitter {shortAddr(detail.submitter)} · Bond {formatEther(BigInt(detail.bond))} GEN · Appeals {detail.appeal_count}/2</div>
             {detail.status === "NON_COMPLIANT" && BigInt(detail.appeal_deadline) > 0n && (
-              <div className="small">Appeal liability: reserved (treasury sweep possible only after write #{detail.appeal_deadline}, current write #{detail.tick}) — the verdict stays appealable while the bond remains reserved.</div>
+              <div className="small">Appeal liability: reserved (treasury sweep possible only after write #{detail.appeal_deadline}, current write #{detail.tick}) - the verdict stays appealable while the bond remains reserved.</div>
             )}
             <h3 style={{ marginBottom: 4 }}>{detail.title}</h3>
             <div className="content-box">{detail.content}</div>
@@ -366,7 +366,7 @@ export default function Dashboard() {
           Verdicts are produced by GenLayer validator consensus (<code>run_nondet</code> with an
           independent comparative re-derivation), not by this UI. This frontend is read/write access to
           an intelligent contract; it does not decide outcomes. An appeal re-runs the SAME assessment
-          on the SAME stored content and rules — no new evidence can be attached.
+          on the SAME stored content and rules - no new evidence can be attached.
         </p>
       </footer>
     </div>
