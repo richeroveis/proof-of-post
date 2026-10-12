@@ -23,6 +23,7 @@ their own as reusable GenLayer primitives.
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
 | Main contract `RuleRegistry` (F7 + withdraw-hardened, 2026-10-11) | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
+| Deploy provenance | source = commit `cbbb459`, sha256 `db714bb9…b5993` of `contracts/rule_registry.py` (byte-identical at current `main`), deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9` |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
 

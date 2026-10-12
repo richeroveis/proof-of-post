@@ -1,3 +1,6 @@
+// HISTORICAL: ran against the superseded pre-F7 instance 0x405e...b594
+// (results in e2e/evidence-flip*.json). The current instance is 0x30A9...149E.
+
 // Focused follow-up: attempt a LIVE verdict-reversing appeal on the deployed
 // remediated instance. Content is deliberately ambiguous on word counting
 // ("well-known" counts as 1 or 2 words depending on the adjudicator), which is
