@@ -24,6 +24,24 @@ reservation-gated appeal hardened against third-party tick-window spam, plus a
 every money/reservation path were exercised **live** on this address
 (recorded in [onchain-activity.md](./onchain-activity.md)).
 
+## Pending deployment (2026-10-13, appeal reconsideration frame)
+
+| Field | Value |
+|---|---|
+| Source | `contracts/rule_registry.py` at sha256 `d10623df4f8a2bccfaa02d4cb335cf70ea841400e88a3c791c4a510f62513743` (adds the G1 appeal reconsideration frame; strict `evaluate()` path byte-identical) |
+| Status | **NOT yet accepted as live proof.** `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` remains the only address the README and frontend point at until a full appeal-refund run completes and its evidence is independently verified |
+| Blocker | studio-dev DB outage from 2026-10-13 ~06:30 UTC: `psycopg2.errors.DiskFull`, "Can't reconnect until invalid transaction is rolled back", periodic `-32603` internal errors on both writes and `gen_call` reads (see `e2e/attempt_*.log`) |
+| Rerun | `cd e2e && ./retry_driver.sh` (fresh in-memory deploy of the current source per attempt; on success writes `e2e/evidence-appeal-refund.json` with `success: true`) |
+| Proof gate | `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` exits 0; only then is the new address adopted everywhere and this table closed with the deploy tx hash |
+
+One early attempt did reach a FINALIZED deploy of the frame source
+(`0x6520063Ba2D28eE6123D2a93E73b90c2FBf59058`, tx
+`0xdd75bd75b40deaa3bf11cc3cf16876f041bdab016e7dff97d23419b2ec300231`) before
+the driver crashed on a post-deploy `gen_call` read the degraded DB refused.
+That instance ran zero lifecycle candidates, so it is NOT evidence of anything
+and is intentionally not adopted; each retry attempt deploys its own fresh
+instance and the completing run is the authoritative one.
+
 ## Superseded instance (pre-F7, 2026-10-11 earlier same day)
 
 | Field | Value |

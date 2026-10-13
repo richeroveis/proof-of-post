@@ -5,6 +5,32 @@ every write path and the money that moves with it. Nothing here is mocked;
 every hash below is queryable on `studio-dev` (chain ID 61997) at
 https://studio-dev.genlayer.com/api.
 
+## Appeal-refund live proof 2026-10-13 - IN PROGRESS, blocked by studio-dev outage
+
+Remediation for the resubmission rejection G1: a dedicated live scenario
+(`e2e/appeal_refund_e2e.mjs`) that deploys the CURRENT source (appeal
+reconsideration frame, sha256 `d10623df…`) fresh on each attempt and runs the
+exact lifecycle `submit -> evaluate -> NON_COMPLIANT -> appeal -> COMPLIANT ->
+refund` against genuinely ambiguous candidates, recording before/after on-chain
+state, native-balance deltas and a machine-checkable evidence file
+(`e2e/evidence-appeal-refund.json`) that `frontend/verify_evidence.mjs`
+re-verifies through the RPC independently of the driver log.
+
+Status as of this writing: **no completed run yet, so G1 live proof is NOT
+demonstrated and resubmission must not proceed on it.** From ~06:30 UTC the
+studio-dev backend refuses most operations with storage-layer errors
+(`psycopg2.errors.DiskFull` on transaction INSERTs, "Can't reconnect until
+invalid transaction is rolled back", "database system is in recovery mode",
+`-32603` on both writes and `gen_call` reads). Attempt logs: `e2e/attempt_1.log`
+through `e2e/attempt_15.log` plus `e2e/retry_driver*.log`. One attempt reached a
+FINALIZED deploy of the frame source
+(`0x6520063Ba2D28eE6123D2a93E73b90c2FBf59058`, tx
+`0xdd75bd75b40deaa3bf11cc3cf16876f041bdab016e7dff97d23419b2ec300231`) before a
+degraded-DB read killed the run; that instance executed zero lifecycle steps
+and is recorded here only for traceability, not as evidence. Rerun with
+`cd e2e && ./retry_driver.sh`; the acceptance evidence is a run with
+`success: true` whose verifier exits 0.
+
 ## F7 + withdraw-hardening regression 2026-10-11 - `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (structured evidence in

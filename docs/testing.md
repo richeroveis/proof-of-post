@@ -20,10 +20,10 @@ finding 4), so we keep the pinned runner and re-evaluate before submission.
 ## 2. Behavioral tests - direct mode
 
 ```
-python -m pytest tests/direct/        # 44 tests, ~2s, no server
+python -m pytest tests/direct/        # 45 tests, ~2s, no server
 ```
 
-Result: **44 passed**. Runs the real contract code in-process and exercises the
+Result: **45 passed**. Runs the real contract code in-process and exercises the
 leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
 - Deploy / initial accounting (`get_stats`), lifecycle `tick`.
@@ -59,7 +59,12 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 - PENDING recovery: `cancel_pending` refunds and sets terminal CANCELLED;
   unauthorized cancel, cancel-after-verdict, double cancel and **late evaluate
   after cancel** all revert deterministically.
-- Treasury withdrawal: owner-only, insufficient-balance guard.
+- Treasury withdrawal: owner-only, insufficient-balance guard, negative/zero
+  raw-amount rejection, and a dedicated double-payout regression:
+  `test_second_withdrawal_after_successful_withdrawal_reverts_without_double_payout`
+  (legitimate exhaustion finalization, first withdrawal genuinely pays out with a
+  funded native balance, second identical withdrawal reverts `Exceeds available
+  slashed` and the monetary ledger is provably unchanged).
 - Resubmission-audit additions: `withdraw_slashed` validates the raw signed int
   for `<= 0` before the unsigned `u256` cast, pinned by
   `test_withdraw_negative_amount_rejected_cleanly`; accounting scales with the

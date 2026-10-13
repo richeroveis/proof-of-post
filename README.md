@@ -23,7 +23,7 @@ their own as reusable GenLayer primitives.
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
 | Main contract `RuleRegistry` (F7 + withdraw-hardened, 2026-10-11) | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
-| Deploy provenance | source = commit `cbbb459`, sha256 `db714bb9…b5993` of `contracts/rule_registry.py` (byte-identical at current `main`), deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9` |
+| Deploy provenance | live instance `0x30A9…149E` = commit `cbbb459`, sha256 `db714bb9…b5993`, deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9`. The 2026-10-13 appeal-reconsideration-frame source (sha256 `d10623df…62513743`) is NOT yet deployed: Studio Devnet's transaction DB rejected all writes on 2026-10-13 (DiskFull / session rollback); deploy and prove it live with `./e2e/retry_driver.sh` once the network recovers |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
 
@@ -43,7 +43,7 @@ contract in [`docs/onchain-activity.md`](docs/onchain-activity.md).
 | `COMPLIANT` | bond refunded, entry verified | terminal |
 | `INCONCLUSIVE` | bond refunded, not verified | terminal |
 | `CANCELLED` | bond refunded | terminal |
-| `NON_COMPLIANT` | bond slashed and **reserved** (`reserved_slashed`; `appeal_deadline = settle tick + 4`) | `appeal` (submitter only) while reserved and `appeal_count < 2`: a reversing verdict releases the reservation, un-slashes and refunds; an upheld verdict keeps it reserved; the second upheld appeal exhausts the budget and finalizes the liability. `withdraw_slashed` (owner only) first sweeps reservations whose `appeal_deadline` has elapsed, then pays the treasury only the unreserved portion; swept entries are no longer appealable |
+| `NON_COMPLIANT` | bond slashed and **reserved** (`reserved_slashed`; `appeal_deadline = settle tick + 4`) | `appeal` (submitter only) while reserved and `appeal_count < 2`: the validator ensemble re-adjudicates the SAME stored content and rules from scratch under an explicit appeal reconsideration frame (clear-violation requirement, ambiguity resolves in favor of the submitter; no new evidence). A reversing verdict releases the reservation, un-slashes and refunds; an upheld verdict keeps it reserved; the second upheld appeal exhausts the budget and finalizes the liability. `withdraw_slashed` (owner only) first sweeps reservations whose `appeal_deadline` has elapsed, then pays the treasury only the unreserved portion; swept entries are no longer appealable |
 
 Ledger invariants held after every transition (asserted in tests):
 `slashed_total >= withdrawn_slashed + reserved_slashed`,
@@ -143,7 +143,7 @@ genvm-lint check contracts/rule_registry.py
 genvm-lint check standalone/evidence-oracle/contract.py
 genvm-lint check standalone/score-registry/contract.py
 
-# fast direct mode tests (mocked web/LLM, no network) - 41 + 54 pass
+# fast direct mode tests (mocked web/LLM, no network) - 45 + 54 pass
 pytest tests/direct -q
 pytest standalone/evidence-oracle/tests/direct standalone/score-registry/tests/direct -q
 

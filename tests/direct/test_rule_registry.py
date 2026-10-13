@@ -716,6 +716,56 @@ def test_withdraw_zero_and_over_cap_rejected(direct_vm, direct_deploy, direct_al
     _assert_ledger(contract)
 
 
+def test_second_withdrawal_after_successful_withdrawal_reverts_without_double_payout(
+    direct_vm, direct_deploy, direct_alice, direct_owner
+):
+    """REJECTION GAP 2: a second withdraw_slashed after a SUCCESSFUL withdrawal
+    must revert and must not pay out twice or release further collateral.
+
+    Full legitimate flow: slash a real bond, finalize its withdrawal eligibility
+    through the appeal-count exhaustion path (two upheld appeals), fund the
+    contract's native balance so the FIRST withdrawal is a genuinely paying
+    success (not the balance-guard revert used elsewhere), withdraw once, verify
+    the ledger, then withdraw the exact same amount again and pin the revert
+    with the availability error. Per the documented direct-harness behavior a
+    reverted write keeps its tick increment (on-chain it rolls back atomically,
+    proven live), so only the monetary fields are asserted after the second
+    attempt.
+    """
+    contract, entry_id = _slash_one(direct_vm, direct_deploy, direct_alice)
+
+    # Legitimate finalization: two upheld appeals exhaust the appeal budget.
+    contract.appeal(entry_id)
+    contract.appeal(entry_id)
+    stats = contract.get_stats()
+    assert stats["reserved_slashed"] == "0"
+    assert stats["available_slashed"] == str(MIN_BOND)
+
+    # First withdrawal: fully paying success.
+    direct_vm.sender = direct_owner
+    direct_vm.deal(direct_vm._contract_address, MIN_BOND)
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(MIN_BOND)
+    assert stats["available_slashed"] == "0"
+    assert stats["reserved_slashed"] == "0"
+    assert stats["slashed_total"] == str(MIN_BOND)
+    _assert_ledger(contract)
+
+    # Second withdrawal of the same amount: rejected by the availability cap,
+    # reserved is 0 so the message is the exact "Exceeds available slashed".
+    with direct_vm.expect_revert("Exceeds available slashed"):
+        contract.withdraw_slashed(MIN_BOND)
+
+    # No double payout: nothing moved by the rejected attempt.
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(MIN_BOND)   # unchanged
+    assert stats["reserved_slashed"] == "0"              # no further release
+    assert stats["available_slashed"] == "0"
+    assert stats["slashed_total"] == str(MIN_BOND)
+    _assert_ledger(contract)
+
+
 def test_withdraw_negative_amount_rejected_cleanly(direct_vm, direct_deploy, direct_alice, direct_owner):
     """AUDIT boundary: a negative amount must fail with the same deterministic
     [EXPECTED] error as zero, not an opaque unsigned-cast failure, and must not

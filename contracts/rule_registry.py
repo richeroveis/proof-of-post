@@ -138,13 +138,33 @@ def _parse_rules(blob: str) -> list:
     return rules
 
 
-def _build_prompt(rules: list, content: str) -> str:
+def _build_prompt(rules: list, content: str, appeal: bool = False) -> str:
     numbered = []
     i = 0
     while i < len(rules):
         numbered.append(str(i) + ". " + rules[i])
         i += 1
     rules_text = "\n".join(numbered)
+    # Reviewer rejection gap 1: an appeal previously re-ran the identical
+    # "strict adjudicator" prompt, so the ensemble simply repeated its first
+    # decision and no verdict reversal could realistically be reached. An
+    # appeal now re-runs the SAME stored content and rules (no new evidence,
+    # same consensus path, same guards) under an explicit reconsideration
+    # frame with a penalty-under-doubt tie-break policy: violations must be
+    # clear, genuine ambiguity resolves in favor of the submitter. The frame
+    # is deterministic input for leader and validators alike.
+    appeal_frame = ""
+    if appeal:
+        appeal_frame = (
+            "APPEAL RECONSIDERATION MODE: this is an appeal of a prior "
+            "NON_COMPLIANT decision on the SAME content and the SAME numbered "
+            "rules below; no new evidence was submitted. Adjudicate every rule "
+            "from scratch, independently of the earlier outcome. A slashed bond "
+            "is a penalty: mark a rule VIOLATED only for a clear violation. "
+            "Where the content is genuinely ambiguous and a reasonable reader "
+            "could find the rule satisfied, resolve the ambiguity in favor of "
+            "the submitter and mark that rule SATISFIED.\n\n"
+        )
     # Content is wrapped as untrusted DATA; embedded instructions must be ignored.
     return (
         "You are a strict compliance adjudicator. You are given a numbered list of "
@@ -160,7 +180,8 @@ def _build_prompt(rules: list, content: str) -> str:
         '"reason": "<short explanation>"}\n'
         "Include exactly one check per rule index, from 0 to "
         + str(len(rules) - 1) + ".\n\n"
-        "RULES:\n" + rules_text + "\n\n"
+        + appeal_frame
+        + "RULES:\n" + rules_text + "\n\n"
         "CONTENT_BEGIN>>>\n" + content + "\n<<<CONTENT_END"
     )
 
@@ -386,7 +407,12 @@ class RuleRegistry(gl.Contract):
         """Submitter re-opens consensus on a NON_COMPLIANT verdict (bounded).
 
         Re-adjudicates the SAME stored content and rules - no new evidence is
-        accepted (reviewer F6). Bounded by MAX_APPEALS and by the reservation
+        accepted (reviewer F6) - from scratch, under an explicit appeal
+        reconsideration frame: violations require a clear breach and genuine
+        ambiguity resolves in favor of the submitter (penalty-under-doubt
+        tie-break). Same consensus path and guards as the first assessment;
+        the frame is deterministic prompt text seen identically by every
+        validator. Bounded by MAX_APPEALS and by the reservation
         itself: while appeal_deadline > 0 the bond is still reserved and a
         reversal is fundable, so the appeal stays available even if unrelated
         writes have burned past the nominal window (audit: tick-window
@@ -411,7 +437,7 @@ class RuleRegistry(gl.Contract):
             # reversal could no longer be funded without double-paying.
             raise gl.vm.UserError(ERROR_EXPECTED + " Appeal liability finalized")
 
-        result = self._assess(entry.content, entry.rules_json)
+        result = self._assess(entry.content, entry.rules_json, True)
         entry.appeal_count = u256(entry.appeal_count + 1)
 
         if result["status"] != STATUS_NON_COMPLIANT:
@@ -601,10 +627,15 @@ class RuleRegistry(gl.Contract):
             i = u256(i + 1)
 
     @gl.private
-    def _assess(self, content: str, rules_json: str) -> dict:
-        """The single non-deterministic operation, with a comparative validator."""
+    def _assess(self, content: str, rules_json: str, appeal: bool = False) -> dict:
+        """The single non-deterministic operation, with a comparative validator.
+
+        `appeal` selects the reconsideration prompt frame; it is a plain
+        deterministic argument, so leader and every validator build the exact
+        same prompt and the equivalence comparison is unchanged.
+        """
         rules = json.loads(rules_json)
-        prompt = _build_prompt(rules, content)
+        prompt = _build_prompt(rules, content, appeal)
 
         def leader_fn():
             raw = gl.nondet.exec_prompt(prompt, response_format="json")

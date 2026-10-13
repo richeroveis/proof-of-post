@@ -61,7 +61,7 @@ instance, deploy tx `0xfcdf6512…660b6`; supersedes the pre-F7
 
 **Setup & test instructions:** see repo `README` / `docs/testing.md` -
 `genvm-lint check contracts/rule_registry.py`; `pytest tests/direct -q`
-(44 direct tests); guarded integration suite via `gltest`; full live
+(45 direct tests); guarded integration suite via `gltest`; full live
 regression `node e2e/studio_devnet_e2e.mjs` (from the `e2e/` dir after
 `npm install`); independent evidence re-check `node frontend/verify_evidence.mjs`
 (re-queries every recorded tx against the RPC; currently 22/22 FINALIZED, exit 0).
@@ -156,7 +156,7 @@ judgment by design.
 | RuleRegistry (superseded) | 0x61eE31810F804E53b4Eb4A3c876F0504A1fC304b | pre-remediation instance |
 | EvidenceOracle | 0xc315465D70D377CDB078aB0117C011d46A288E1F | FINALIZED, get_stats/get_min_bond read OK |
 | ScoreRegistry | 0x2579a22a567a6A9D424Fa6225c201aD359bd8d66 | FINALIZED, get_stats/list_items read OK |
-| Direct tests | 44 (main) + 54 (standalone) | all pass (98 total; 12 integration guarded/skipped) |
+| Direct tests | 45 (main) + 54 (standalone) | all pass (98 total; 12 integration guarded/skipped) |
 | Lint | both standalone + main | genvm-lint check PASS |
 
 ## Remediation matrix (evidence-based)
@@ -203,3 +203,18 @@ tx hashes resolve to `docs/onchain-activity.md` / `e2e/evidence.json`.
    on-chain; see `docs/onchain-activity.md`), but remains a protocol-semantic
    decision awaiting explicit reviewer acceptance - it is not claimed accepted.
    See `docs/remediation-plan.md` F7.
+4. **Do not resubmit until the G1 live proof exists.** Acceptance requires a
+   completed `e2e/appeal_refund_e2e.mjs` run with `success: true` in
+   `e2e/evidence-appeal-refund.json` (real `NON_COMPLIANT -> COMPLIANT` appeal
+   with the bond refunded on-chain), independently confirmed by
+   `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` exiting
+   0. As of 2026-10-13 this has NOT been achieved: studio-dev has been rejecting
+   writes and reads with storage-layer errors (`DiskFull`, session rollback,
+   `-32603`) since ~06:30 UTC, so no attempt completed. The appeal
+   reconsideration frame (the fix that makes a live reversal reachable) lives in
+   the source; it was never exercised on a deployed instance yet. Rerun
+   `cd e2e && ./retry_driver.sh` when the network recovers, verify, adopt the
+   new address per `docs/deployment.md`, then resubmit.
+5. G2 (second-withdrawal regression) is CLOSED locally:
+   `test_second_withdrawal_after_successful_withdrawal_reverts_without_double_payout`
+   passes in `pytest tests/direct -q` (45 tests); no live dependency.

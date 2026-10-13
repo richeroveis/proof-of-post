@@ -1,0 +1,62 @@
+{
+  "startedAt": "2026-10-13T12:17:41.686Z",
+  "network": "studio-dev(61997)",
+  "contractSourceSha256": "d10623df4f8a2bccfaa02d4cb335cf70ea841400e88a3c791c4a510f62513743",
+  "address": "0x60F645c622C3CeAd7A61009b48DCfF46B9BA664C",
+  "steps": [
+    {
+      "step": "fund_submitter",
+      "at": "2026-10-13T12:17:53.015Z",
+      "hash": "0xbe6edf3434c38570c00edf91ce8eb9699b3fc717e93863905ede43661aac15fd",
+      "status": "UNDETERMINED",
+      "verdicts": [],
+      "attempt": 1
+    },
+    {
+      "step": "fund_submitter",
+      "at": "2026-10-13T12:18:33.777Z",
+      "hash": "0x7c617f39b7cfa5dbf2cc131c78569be95b25c39c89dcaeacdfc4ab986731093a",
+      "status": "FINALIZED",
+      "verdicts": [],
+      "attempt": 2
+    },
+    {
+      "step": "fund_balance",
+      "at": "2026-10-13T12:18:39.451Z",
+      "sub_before": "0",
+      "sub_after": "6.5"
+    },
+    {
+      "step": "deploy",
+      "at": "2026-10-13T12:19:18.186Z",
+      "hash": "0xa50b3c48cc7aea27b7ebe3608265cfc144be358744082696c1224fef6da59fa9",
+      "status": "FINALIZED",
+      "verdicts": [],
+      "attempt": 1
+    },
+    {
+      "step": "deploy_address",
+      "at": "2026-10-13T12:19:18.187Z",
+      "address": "0x60F645c622C3CeAd7A61009b48DCfF46B9BA664C"
+    }
+  ],
+  "candidates": [],
+  "expectations": {
+    "txs": [
+      {
+        "label": "fund_submitter",
+        "hash": "0x7c617f39b7cfa5dbf2cc131c78569be95b25c39c89dcaeacdfc4ab986731093a",
+        "must_finalize": true,
+        "forbid": [
+          "[EXPECTED]",
+          "[LLM_ERROR]",
+          "[TRANSIENT]",
+          "[EXTERNAL]"
+        ],
+        "verdict_contains": null
+      }
+    ],
+    "final": null
+  },
+  "success": false
+}

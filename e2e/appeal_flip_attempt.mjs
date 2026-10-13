@@ -16,7 +16,7 @@ import { parseEther, formatEther } from "viem";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
-const ADDR = "0x405e957542856E5f6830EDD40757480BDA8ab594";
+const ADDR = process.env.RULE_REGISTRY_ADDRESS ?? "0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E";
 const MIN_BOND = 10n ** 18n;
 
 let mainPk = null;
