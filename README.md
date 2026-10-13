@@ -23,7 +23,7 @@ their own as reusable GenLayer primitives.
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
 | Main contract `RuleRegistry` (F7 + withdraw-hardened, 2026-10-11) | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
-| Deploy provenance | live instance `0x30A9…149E` = commit `cbbb459`, sha256 `db714bb9…b5993`, deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9`. The 2026-10-13 appeal-reconsideration-frame source (sha256 `d10623df…62513743`) is NOT yet deployed: Studio Devnet's transaction DB rejected all writes on 2026-10-13 (DiskFull / session rollback); deploy and prove it live with `./e2e/retry_driver.sh` once the network recovers |
+| Deploy provenance | live instance `0x30A9…149E` = commit `cbbb459`, sha256 `db714bb9…b5993`, deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9`. That instance predates the appeal-reconsideration frame, so it does NOT match the current committed source (commit `b032f04`, sha256 `92e94de8074a7d06…c67f51`). The current source is NOT yet deployed: Studio Devnet's contract-execution read path (`gen_call`) rejected every read on 2026-10-13 (`Can't reconnect until invalid transaction is rolled back` / DiskFull), so the frame cannot be deployed and proven live. Redeploy and prove it with `cd e2e && ./retry_driver.sh` once `gen_call` reads recover, then update this row to the new address, commit and sha256 |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
 
@@ -143,7 +143,7 @@ genvm-lint check contracts/rule_registry.py
 genvm-lint check standalone/evidence-oracle/contract.py
 genvm-lint check standalone/score-registry/contract.py
 
-# fast direct mode tests (mocked web/LLM, no network) - 45 + 54 pass
+# fast direct mode tests (mocked web/LLM, no network) - 48 + 54 pass
 pytest tests/direct -q
 pytest standalone/evidence-oracle/tests/direct standalone/score-registry/tests/direct -q
 
@@ -191,9 +191,18 @@ decides whether a bond is refunded or slashed.
   still **needs reviewer sign-off** as a semantics decision; a quiet registry
   therefore keeps collateral reserved longer in real time, which is the
   conservative direction for submitters.
-- Whether a verdict is *reversible* on appeal is up to the validator ensemble:
-  the reversal/refund path is proven deterministic in direct tests and live
-  `e2e/` runs, but an individual LLM flip cannot be forced on command.
+- Whether a verdict is *reversible* on appeal is up to the validator ensemble.
+  The reversal/refund transition is proven deterministic in direct tests
+  (`test_appeal_flips_non_compliant_to_compliant`,
+  `test_attack_withdraw_while_appealable_fails_then_win_refunds`) and the refund
+  *mechanism* (COMPLIANT and cancel payouts) has been shown live, but a
+  verdict-REVERSING appeal with an actual on-chain refund has NOT yet been
+  demonstrated: no live run has produced a flip, and on 2026-10-13 the
+  studio-dev `gen_call` read path was down, so even the attempt could not be
+  verified. The appeal-reconsideration frame is committed but not yet deployed
+  or proven live (see `docs/remediation-plan.md` G1, `docs/onchain-activity.md`).
+  This gap is open, not closed, and an individual LLM flip cannot be forced on
+  command without fabricating a result.
 - Consensus on `evaluate`/`resolve`/`grade`-type writes depends on the shared
   validator set being available and converging; constructors and views are
   deterministic and were verified live on studio-dev.

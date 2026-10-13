@@ -766,6 +766,194 @@ def test_second_withdrawal_after_successful_withdrawal_reverts_without_double_pa
     _assert_ledger(contract)
 
 
+def test_second_withdrawal_of_remaining_available_succeeds_and_third_reverts(
+    direct_vm, direct_deploy, direct_alice, direct_owner
+):
+    """REJECTION GAP 2 (case 2 and 6): split the finalized collateral into two
+    legitimate withdrawals. The first takes half the available amount, the
+    second takes exactly the remaining available and MUST succeed, and a third
+    beyond what is available MUST revert. The treasury-receipt ledger (the
+    direct-mode proxy for the treasury balance, since native transfers are a
+    no-op here) equals exactly the sum of the two payouts afterwards, never more.
+    """
+    contract = _deploy(direct_deploy)
+    direct_vm.sender = direct_alice
+    direct_vm.value = MIN_BOND
+    e1 = contract.submit("a", "content a", RULES_BLOB)
+    direct_vm.value = MIN_BOND
+    e2 = contract.submit("b", "content b", RULES_BLOB)
+    _mock_llm(direct_vm, ["VIOLATED", "SATISFIED"])
+    direct_vm.value = 0
+    contract.evaluate(e1)
+    contract.evaluate(e2)
+
+    # Two upheld appeals per entry finalize both liabilities (reserved -> 0).
+    contract.appeal(e1)
+    contract.appeal(e1)
+    contract.appeal(e2)
+    contract.appeal(e2)
+    stats = contract.get_stats()
+    assert stats["reserved_slashed"] == "0"
+    assert stats["slashed_total"] == str(2 * MIN_BOND)
+    assert stats["available_slashed"] == str(2 * MIN_BOND)
+    _assert_ledger(contract)
+
+    direct_vm.sender = direct_owner
+    direct_vm.deal(direct_vm._contract_address, 2 * MIN_BOND)
+
+    # First withdrawal: half the finalized amount.
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(MIN_BOND)
+    assert stats["available_slashed"] == str(MIN_BOND)
+    _assert_ledger(contract)
+
+    # Second withdrawal: the remaining available succeeds.
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    # Sum of the two payouts, exactly once each (treasury-receipt proxy).
+    assert stats["withdrawn_slashed"] == str(2 * MIN_BOND)
+    assert stats["available_slashed"] == "0"
+    _assert_ledger(contract)
+
+    # Third withdrawal beyond what is available reverts and pays nothing.
+    with direct_vm.expect_revert("Exceeds available slashed"):
+        contract.withdraw_slashed(MIN_BOND)
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(2 * MIN_BOND)  # unchanged
+    assert stats["available_slashed"] == "0"
+    _assert_ledger(contract)
+
+
+def test_withdraw_is_capped_by_native_balance_then_by_availability(
+    direct_vm, direct_deploy, direct_alice, direct_owner
+):
+    """REJECTION GAP 2 (case 3): a withdrawal is bounded by TWO independent
+    ceilings, the availability figure and the contract's native balance. Finalize
+    one bond, then prove the native-balance guard is a real separate cap: with
+    zero funded balance the availability check passes but the payout reverts at
+    `Insufficient contract balance`, leaving the ledger untouched. Fund exactly
+    the bond, pay it, and show a second withdrawal right after (no new slashed
+    funds) is then stopped by the availability cap even though the direct-mode
+    native balance does not decrease after a no-op payout.
+    """
+    contract = _deploy(direct_deploy)
+    direct_vm.sender = direct_alice
+    direct_vm.value = MIN_BOND
+    e1 = contract.submit("a", "content a", RULES_BLOB)
+    _mock_llm(direct_vm, ["VIOLATED", "SATISFIED"])
+    direct_vm.value = 0
+    contract.evaluate(e1)
+    contract.appeal(e1)
+    contract.appeal(e1)  # finalize: available == MIN_BOND, reserved 0
+    stats = contract.get_stats()
+    assert stats["reserved_slashed"] == "0"
+    assert stats["available_slashed"] == str(MIN_BOND)
+
+    # Native-balance ceiling: funded balance is zero, so the availability check
+    # passes and the distinct balance guard fires. Reaching it proves balance is
+    # its own cap, not just a restatement of the availability figure.
+    direct_vm.sender = direct_owner
+    with direct_vm.expect_revert("Insufficient contract balance"):
+        contract.withdraw_slashed(MIN_BOND)
+    assert contract.get_stats()["withdrawn_slashed"] == "0"
+    _assert_ledger(contract)
+
+    # Fund the exact finalized bond and withdraw it: genuine paying success.
+    direct_vm.deal(direct_vm._contract_address, MIN_BOND)
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(MIN_BOND)
+    assert stats["available_slashed"] == "0"
+    _assert_ledger(contract)
+
+    # Second withdrawal right after, no new slashed funds: the availability cap
+    # stops it (in direct mode the balance stays funded because emit_transfer is
+    # a no-op, so only the ledger cap can, and does, block the repeat).
+    with direct_vm.expect_revert("Exceeds available slashed"):
+        contract.withdraw_slashed(MIN_BOND)
+    assert contract.get_stats()["withdrawn_slashed"] == str(MIN_BOND)
+    _assert_ledger(contract)
+
+
+def test_second_withdrawal_does_not_ressweep_or_double_count_a_finalized_entry(
+    direct_vm, direct_deploy, direct_alice, direct_bob, direct_owner
+):
+    """REJECTION GAP 2 (case 5): a reservation swept and paid by the FIRST
+    withdrawal is finalized, becomes non-appealable, and must NOT be swept or
+    counted again by a SECOND withdrawal. Two entries settle at different
+    deadlines; the first withdrawal sweeps only the elapsed one and pays it, the
+    second (after the younger one also elapses) sweeps that one and pays it, and
+    the treasury-receipt ledger is exactly the sum of the two payouts, never
+    double-counting the first entry.
+    """
+    contract = _deploy(direct_deploy)
+    direct_vm.sender = direct_alice
+
+    direct_vm.value = MIN_BOND
+    a = contract.submit("a", "content a", RULES_BLOB)
+    _mock_llm(direct_vm, ["VIOLATED", "SATISFIED"])
+    direct_vm.value = 0
+    contract.evaluate(a)
+    dl_a = int(contract.get_entry(a)["appeal_deadline"])
+
+    direct_vm.value = MIN_BOND
+    b = contract.submit("b", "content b", RULES_BLOB)
+    direct_vm.value = 0
+    contract.evaluate(b)
+    dl_b = int(contract.get_entry(b)["appeal_deadline"])
+    assert dl_a < dl_b
+    assert contract.get_stats()["reserved_slashed"] == str(2 * MIN_BOND)
+
+    # Advance into A's expiry but stay below B's.
+    direct_vm.sender = direct_bob
+    direct_vm.value = MIN_BOND
+    while int(contract.get_stats()["tick"]) < dl_a:
+        contract.submit("filler", "filler content", RULES_BLOB)
+    direct_vm.value = 0
+    assert dl_a <= int(contract.get_stats()["tick"]) < dl_b
+
+    # First withdrawal sweeps and pays ONLY A; B stays reserved and appealable.
+    direct_vm.sender = direct_owner
+    direct_vm.deal(direct_vm._contract_address, 2 * MIN_BOND)
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(MIN_BOND)       # A paid only
+    assert stats["reserved_slashed"] == str(MIN_BOND)        # B still reserved
+    assert contract.get_entry(a)["appeal_deadline"] == "0"   # A finalized
+    assert int(contract.get_entry(b)["appeal_deadline"]) == dl_b
+    _assert_ledger(contract)
+
+    # A is no longer appealable after the completed paying withdrawal swept it.
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Appeal liability finalized"):
+        contract.appeal(a)
+
+    # Advance past B's window; the second withdrawal sweeps B and pays it. A's
+    # deadline is already 0 so the sweep skips it: withdrawn grows by exactly
+    # B's bond (sum of the two payouts), and A stays finalized/non-appealable.
+    direct_vm.sender = direct_bob
+    direct_vm.value = MIN_BOND
+    while int(contract.get_stats()["tick"]) < dl_b:
+        contract.submit("filler2", "filler content", RULES_BLOB)
+    direct_vm.value = 0
+    direct_vm.sender = direct_owner
+    contract.withdraw_slashed(MIN_BOND)  # must NOT revert
+    stats = contract.get_stats()
+    assert stats["withdrawn_slashed"] == str(2 * MIN_BOND)   # A + B, no double count
+    assert stats["reserved_slashed"] == "0"
+    assert stats["slashed_total"] == str(2 * MIN_BOND)
+    assert stats["available_slashed"] == "0"
+    assert contract.get_entry(a)["appeal_deadline"] == "0"
+    assert contract.get_entry(b)["appeal_deadline"] == "0"
+    _assert_ledger(contract)
+
+    # The second withdrawal did not reopen A: still non-appealable.
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Appeal liability finalized"):
+        contract.appeal(a)
+
+
 def test_withdraw_negative_amount_rejected_cleanly(direct_vm, direct_deploy, direct_alice, direct_owner):
     """AUDIT boundary: a negative amount must fail with the same deterministic
     [EXPECTED] error as zero, not an opaque unsigned-cast failure, and must not

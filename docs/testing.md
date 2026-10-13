@@ -8,8 +8,8 @@ Three-layer validation, per the campaign's security/testability criteria.
 genvm-lint check contracts/rule_registry.py
 ```
 
-Result: **PASS**. `validate: ok=true`. Contract `RuleRegistry`, 9 methods
-(4 view, 5 write), constructor params 1 (`min_bond`; the treasury defaults to
+Result: **PASS**. `validate: ok=true`. Contract `RuleRegistry`, 10 methods
+(4 view, 6 write), constructor params 1 (`min_bond`; the treasury defaults to
 the deployer - see `docs/deployment.md` finding 3). The runner pin
 `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` is accepted,
 preceded by the `# v0.2.16` version-preamble line that the Studio Devnet
@@ -20,10 +20,10 @@ finding 4), so we keep the pinned runner and re-evaluate before submission.
 ## 2. Behavioral tests - direct mode
 
 ```
-python -m pytest tests/direct/        # 45 tests, ~2s, no server
+python -m pytest tests/direct/        # 48 tests, ~3s, no server
 ```
 
-Result: **45 passed**. Runs the real contract code in-process and exercises the
+Result: **48 passed**. Runs the real contract code in-process and exercises the
 leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
 
 - Deploy / initial accounting (`get_stats`), lifecycle `tick`.
@@ -64,7 +64,18 @@ leader **and** the comparative validator (`direct_vm.run_validator`). Coverage:
   `test_second_withdrawal_after_successful_withdrawal_reverts_without_double_payout`
   (legitimate exhaustion finalization, first withdrawal genuinely pays out with a
   funded native balance, second identical withdrawal reverts `Exceeds available
-  slashed` and the monetary ledger is provably unchanged).
+  slashed` and the monetary ledger is provably unchanged). Reviewer G2 direct
+  coverage was then widened to every second-withdrawal shape:
+  `test_second_withdrawal_of_remaining_available_succeeds_and_third_reverts`
+  (half, then the remaining available succeeds, then a third beyond availability
+  reverts, and the treasury-receipt ledger equals exactly the sum of the two
+  payouts), `test_withdraw_is_capped_by_native_balance_then_by_availability`
+  (the native-balance guard is a real separate ceiling before the availability
+  cap stops a second withdrawal with no new slashed funds), and
+  `test_second_withdrawal_does_not_ressweep_or_double_count_a_finalized_entry`
+  (an entry swept and paid by the first withdrawal is no longer appealable, and
+  the second withdrawal neither re-sweeps nor double-counts it). None of these
+  found a contract defect; the accounting held on every path.
 - Resubmission-audit additions: `withdraw_slashed` validates the raw signed int
   for `<= 0` before the unsigned `u256` cast, pinned by
   `test_withdraw_negative_amount_rejected_cleanly`; accounting scales with the

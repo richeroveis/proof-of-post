@@ -31,6 +31,45 @@ and is recorded here only for traceability, not as evidence. Rerun with
 `cd e2e && ./retry_driver.sh`; the acceptance evidence is a run with
 `success: true` whose verifier exits 0.
 
+### Verdict-reversing appeal with refund: NOT achieved (reviewer G1)
+
+Target flow, exactly what the reviewer asked to see: `submit -> evaluate ->
+NON_COMPLIANT (bond slashed + reserved) -> appeal -> COMPLIANT (verdict
+reversed) -> reservation released, bond un-slashed, submitter native balance
+up by the bond`, every step read back from the live contract with tx hashes and
+before/after ledger numbers (`slashed_total`, `reserved_slashed`,
+`withdrawn_slashed`, `bonded_pending`) and a submitter balance delta.
+
+**This pass (2026-10-13) the flow could not be executed or verified, so NO such
+refund exists to report.** The blocker is the studio-dev storage outage, which
+was still in effect when this pass ran. A read-only `gen_call` health monitor
+polled `get_stats` on the current instance 24 times over ~20 minutes; every
+single poll failed with `Can't reconnect until invalid transaction is rolled
+back`, while stateless RPC (`eth_chainId` and `estimateTransactionFees`) kept
+responding. Full timestamps (UTC): polls 1-24 at 17:50:50, 17:51:41, 17:52:32,
+17:53:23, 17:54:14, 17:55:05, 17:55:56, 17:56:53, 17:57:44, 17:58:34, 17:59:25,
+18:00:16, 18:01:07, 18:01:58, 18:02:50, 18:03:41, 18:04:31, 18:05:22, 18:06:16,
+18:07:09, 18:08:02, 18:08:53, 18:09:44, 18:10:34; final result `gen_call still
+DOWN after full window`. This is on top of the 15 driver attempts earlier the
+same day.
+
+Because the proof requires reading the flipped verdict and the balance delta
+back from the chain, deploying and firing an appeal whose result cannot be read
+would spend fees and produce no verifiable evidence, so no lifecycle transactions
+were submitted this pass. The candidate set in `e2e/appeal_refund_e2e.mjs` was
+widened from 4 to 10 genuinely ambiguous posts (hyphenated/soft word counts,
+mixed tone, sentence segmentation, substring word-form mentions, emoticon-vs-
+emoji, digits-vs-words, sentence capitalization, formality/exclamation) so that a
+single recovered run gets many honest chances to earn a flip from the ensemble.
+
+**Honest status:** G1 remains OPEN. The reversal/refund accounting is proven
+only in direct tests (`test_appeal_flips_non_compliant_to_compliant`,
+`test_attack_withdraw_while_appealable_fails_then_win_refunds`); it has never
+been shown live. Resubmission must not claim it until `cd e2e &&
+./retry_driver.sh` yields a `success: true` evidence file that
+`node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` re-verifies
+with exit 0.
+
 ## F7 + withdraw-hardening regression 2026-10-11 - `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (structured evidence in

@@ -207,6 +207,36 @@ const CANDIDATES = [
     rules: "The post must mention the word sunny",
     content: "A rare sunniness broke through the grey week, lifting everyone.",
   },
+  {
+    title: "Comma-list count edge",
+    rules: "The post must list at least three distinct items",
+    content: "For the trail bring water, and snacks.",
+  },
+  {
+    title: "Emoticon vs emoji edge",
+    rules: "The post must contain no emojis",
+    content: "Launch went smoothly :-) thanks to the whole night crew.",
+  },
+  {
+    title: "Digits vs words number edge",
+    rules: "The post must spell out numbers as words, never digits",
+    content: "We shipped twenty-three fixes, and two follow-ups are pending.",
+  },
+  {
+    title: "Sentence capitalization edge",
+    rules: "Every sentence must begin with a capital letter",
+    content: "ship the patch tonight. Then we can all celebrate tomorrow.",
+  },
+  {
+    title: "Formality exclamation edge",
+    rules: "The post must stay formal and avoid exclamation marks",
+    content: "Quarterly results are ready! Please review them at your convenience.",
+  },
+  {
+    title: "Substring word mention edge",
+    rules: "The post must mention the exact word blue",
+    content: "After the storm the far horizon looked blueish for a moment.",
+  },
 ];
 
 // ---------------------------------------------------------------------------
