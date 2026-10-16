@@ -29,7 +29,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
 const CONTRACT_FILE = path.join(ROOT, "contracts", "rule_registry.py");
 const EVIDENCE_FILE = path.join(HERE, "evidence-appeal-refund.json");
-const MIN_BOND = 10n ** 18n;
+// Studio-dev owner wallet budget is small and the network is not gasless, so the
+// proof uses a 0.1 GEN bond. The reversal/reservation/refund path under test is
+// amount-independent; the recorded balances and deltas are all real on-chain GEN.
+const MIN_BOND = 10n ** 17n;
 
 let mainPk = null;
 for (const line of fs.readFileSync(path.join(ROOT, ".env"), "utf8").split(/\r?\n/)) {
@@ -66,7 +69,12 @@ const evidence = {
 const { createHash } = await import("crypto");
 evidence.contractSourceSha256 = createHash("sha256").update(fs.readFileSync(CONTRACT_FILE)).digest("hex");
 
-const save = () => fs.writeFileSync(EVIDENCE_FILE, JSON.stringify(evidence, null, 2));
+// save() must be BigInt-safe: candidate before/after snapshots carry raw
+// getBalance() BigInts, and a bare JSON.stringify throws on them.
+const save = () => fs.writeFileSync(
+  EVIDENCE_FILE,
+  JSON.stringify(evidence, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2),
+);
 const rec = (step, data) => {
   evidence.steps.push({ step, at: new Date().toISOString(), ...data });
   console.log(`\n### ${step}`);
@@ -245,7 +253,7 @@ const CANDIDATES = [
 {
   const before = await balanceOf(subAcct.address);
   const t = await write("fund_submitter", mainClient, (est) => mainClient.sendTransaction({
-    to: subAcct.address, value: parseEther("6.5"),
+    to: subAcct.address, value: parseEther("2.2"),
     fees: { distribution: est.distribution, feeValue: est.feeValue },
   }), null);
   if (t.status !== "FINALIZED" || t.execError) throw new Error("funding failed: " + (t.execError ?? t.status));

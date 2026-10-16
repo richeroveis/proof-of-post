@@ -1,38 +1,50 @@
 # Deployment Record - ProofOfPost (RuleRegistry)
 
-## Live deployment (F7 + withdraw-hardened, 2026-10-11)
+## Live deployment (appeal-reconsideration frame, verdict reversal + refund verified, 2026-10-16)
 
 | Field | Value |
 |---|---|
 | Network | GenLayer Studio Devnet (`studio-dev`, Studio Next preview) |
 | Chain ID | 61997 |
 | RPC | https://studio-dev.genlayer.com/api |
-| Contract | `contracts/rule_registry.py` → class `RuleRegistry` |
-| Address | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
-| Deploy tx | `0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6` (FINALIZED, no execution error) |
-| Consensus | leader + validators executed with return (5 validators, MAJORITY_AGREE) |
-| Constructor args | `min_bond = 1000000000000000000` (1 GEN, atto-scale) |
+| Contract | `contracts/rule_registry.py` -> class `RuleRegistry` |
+| Address | `0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b` |
+| Commit / source sha256 | `409e6fd` / `92e94de8074a7d063468e1f64d556f8e1eb1d69c49a6b6fa4733d493e7c67f51` (deployed source matches the committed file) |
+| Deploy tx | `0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70` (FINALIZED, no execution error) |
+| Consensus | leader + validators executed with return |
+| Constructor args | `min_bond = 100000000000000000` (0.1 GEN, atto-scale) |
 | Owner | deployer `0x154a452b0755EE812014C1405B15D905BA06f9c7` |
-| Treasury | `0x754238CAa006B99fe686Bb729457c6E49D231Cda` (set via `set_treasury`; withdrawals route ONLY here) |
+| Treasury | a throwaway in-memory key set via `set_treasury`; withdrawals route ONLY here |
+| Proof | `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` exits 0; entry 1 reversed NON_COMPLIANT -> COMPLIANT on appeal (`0x5476309b…ae727b29`) with a real 0.1 GEN refund |
 
 This instance carries the full reviewer remediation (see
 [remediation-plan.md](./remediation-plan.md)): F1 appeal-window reservation of
 slashed collateral, F2 `cancel_pending` recovery, F3 reject-don't-truncate input
 limits, F5 treasury-routed withdrawal, F6 bounded appeal semantics, F7 the
-reservation-gated appeal hardened against third-party tick-window spam, plus a
-`withdraw_slashed` raw-int malformed-input guard. The F7 tick-spam survival and
-every money/reservation path were exercised **live** on this address
+reservation-gated appeal hardened against third-party tick-window spam, a
+`withdraw_slashed` raw-int malformed-input guard, and the G1 appeal
+reconsideration frame. Every money/reservation path and the verdict-reversing
+appeal refund were exercised **live** on this address
 (recorded in [onchain-activity.md](./onchain-activity.md)).
 
-## Pending deployment (2026-10-13, appeal reconsideration frame)
+## Superseded instance (F7 + withdraw-hardened, 2026-10-11)
+
+`0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (deploy tx
+`0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6`,
+`min_bond = 1 GEN`, treasury `0x754238CAa006B99fe686Bb729457c6E49D231Cda`) predates
+the appeal-reconsideration frame, so it does NOT match the committed source. Kept
+only as history: it proved the F7 tick-spam appeal survival, premature-withdraw
+rejection, treasury-only routing and cancel recovery live.
+
+## Appeal-refund driver outcome (2026-10-16, G1 CLOSED)
 
 | Field | Value |
 |---|---|
-| Source | `contracts/rule_registry.py` at sha256 `d10623df4f8a2bccfaa02d4cb335cf70ea841400e88a3c791c4a510f62513743` (adds the G1 appeal reconsideration frame; strict `evaluate()` path byte-identical) |
-| Status | **NOT yet accepted as live proof.** `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` remains the only address the README and frontend point at until a full appeal-refund run completes and its evidence is independently verified |
-| Blocker | studio-dev DB outage from 2026-10-13 ~06:30 UTC: `psycopg2.errors.DiskFull`, "Can't reconnect until invalid transaction is rolled back", periodic `-32603` internal errors on both writes and `gen_call` reads (see `e2e/attempt_*.log`) |
+| Source | `contracts/rule_registry.py` at sha256 `92e94de8074a7d063468e1f64d556f8e1eb1d69c49a6b6fa4733d493e7c67f51` (adds the G1 appeal reconsideration frame; strict `evaluate()` path byte-identical) |
+| Status | **DONE, verified live.** Deployed at `0xC0d3…377b`; entry 1 reversed NON_COMPLIANT -> COMPLIANT on appeal with a real 0.1 GEN refund; evidence independently verified (exit 0) |
+| Prior blocker (resolved) | studio-dev DB outage from 2026-10-13: `psycopg2.errors.DiskFull`, "Can't reconnect until invalid transaction is rolled back", `-32603` on writes and `gen_call` reads; recovered by 2026-10-16 (5/5 probe reads OK) |
 | Rerun | `cd e2e && ./retry_driver.sh` (fresh in-memory deploy of the current source per attempt; on success writes `e2e/evidence-appeal-refund.json` with `success: true`) |
-| Proof gate | `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` exits 0; only then is the new address adopted everywhere and this table closed with the deploy tx hash |
+| Proof gate | `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` exits 0 |
 
 One early attempt did reach a FINALIZED deploy of the frame source
 (`0x6520063Ba2D28eE6123D2a93E73b90c2FBf59058`, tx

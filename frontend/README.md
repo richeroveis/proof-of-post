@@ -40,8 +40,10 @@ npm run dev
 
 https://richeroveis.github.io/proof-of-post/ - built by the
 `Deploy frontend to GitHub Pages` Actions workflow from the deployed contract
-`0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` on studio-dev (the current F7 +
-withdraw-hardened instance; supersedes `0x405e…b594` and `0x61eE…304b`).
+`0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b` on studio-dev (the current
+appeal-reconsideration-frame instance, with the verdict-reversing appeal and
+refund verified live 2026-10-16; supersedes `0x30A9…149E`, `0x405e…b594` and
+`0x61eE…304b`).
 
 ## Build (static export for GitHub Pages)
 

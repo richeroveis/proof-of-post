@@ -17,7 +17,7 @@ for (const line of fs.readFileSync(path.join(ROOT, ".env"), "utf8").split(/\r?\n
 if (!pk) throw new Error("no GENLAYER_PRIVATE_KEY in .env");
 if (!pk.startsWith("0x")) pk = "0x" + pk;
 
-const CONTRACT = "0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E";
+const CONTRACT = "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b";
 const account = createAccount(pk);
 const client = createClient({ chain: studioDevnet, account });
 const norm = (v) =>

@@ -22,8 +22,8 @@ their own as reusable GenLayer primitives.
 | Live demo | https://richeroveis.github.io/proof-of-post |
 | Repository | https://github.com/richeroveis/proof-of-post |
 | Network | GenLayer Studio Devnet (`studio-dev`, chainId **61997**, RPC `https://studio-dev.genlayer.com/api`) |
-| Main contract `RuleRegistry` (F7 + withdraw-hardened, 2026-10-11) | `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` |
-| Deploy provenance | live instance `0x30A9…149E` = commit `cbbb459`, sha256 `db714bb9…b5993`, deploy tx `0xfcdf651213c1414b…aaf660b6` (FINALIZED), tag `deploy-0x30A9`. That instance predates the appeal-reconsideration frame, so it does NOT match the current committed source (commit `b032f04`, sha256 `92e94de8074a7d06…c67f51`). The current source is NOT yet deployed: Studio Devnet's contract-execution read path (`gen_call`) rejected every read on 2026-10-13 (`Can't reconnect until invalid transaction is rolled back` / DiskFull), so the frame cannot be deployed and proven live. Redeploy and prove it with `cd e2e && ./retry_driver.sh` once `gen_call` reads recover, then update this row to the new address, commit and sha256 |
+| Main contract `RuleRegistry` (appeal-reconsideration frame, verdict-reversing appeal + refund verified live 2026-10-16) | `0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b` |
+| Deploy provenance | live instance `0xC0d3…377b` = commit `409e6fd`, sha256 `92e94de8074a7d06…c67f51` (matches the committed `contracts/rule_registry.py` exactly), deploy tx `0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70` (FINALIZED). The reviewer G1 gap is now closed on-chain: entry 1 settled NON_COMPLIANT (`0x9166f438…405a232`) then reversed to COMPLIANT on appeal (`0x5476309b…ae727b29`), releasing the reservation, un-slashing and refunding the 0.1 GEN bond to the submitter; verified through the RPC by `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` (raw evidence `e2e/evidence-appeal-refund.json`). Superseded instances: `0x30A9…149E` (pre-frame) and `0x405e…b594` (pre-F7), kept only as history. Studio Devnet is ephemeral and its `gen_call` path had a server-side outage from 2026-10-13 (recovered 2026-10-16); if it goes down again, redeploy and re-run `cd e2e && ./retry_driver.sh` and update this row |
 | Standalone `EvidenceOracle` | `0xc315465D70D377CDB078aB0117C011d46A288E1F` |
 | Standalone `ScoreRegistry` | `0x2579a22a567a6A9D424Fa6225c201aD359bd8d66` |
 
@@ -187,22 +187,26 @@ decides whether a bond is refunded or slashed.
   finalized - a completed paying withdrawal or the two-appeal budget being
   exhausted. This is a deliberate protocol-semantic change (see
   `docs/remediation-plan.md`, F7): it is now deployed and **live-verified on
-  `0x30A9A1D8…d149E`** (the tick-window-spam appeal survives on-chain), but it
+  `0xC0d3…377b`** (the tick-window-spam appeal survives on-chain), but it
   still **needs reviewer sign-off** as a semantics decision; a quiet registry
   therefore keeps collateral reserved longer in real time, which is the
   conservative direction for submitters.
 - Whether a verdict is *reversible* on appeal is up to the validator ensemble.
-  The reversal/refund transition is proven deterministic in direct tests
-  (`test_appeal_flips_non_compliant_to_compliant`,
-  `test_attack_withdraw_while_appealable_fails_then_win_refunds`) and the refund
-  *mechanism* (COMPLIANT and cancel payouts) has been shown live, but a
-  verdict-REVERSING appeal with an actual on-chain refund has NOT yet been
-  demonstrated: no live run has produced a flip, and on 2026-10-13 the
-  studio-dev `gen_call` read path was down, so even the attempt could not be
-  verified. The appeal-reconsideration frame is committed but not yet deployed
-  or proven live (see `docs/remediation-plan.md` G1, `docs/onchain-activity.md`).
-  This gap is open, not closed, and an individual LLM flip cannot be forced on
-  command without fabricating a result.
+  This is now **proven live**: on 2026-10-16 the `Mixed-tone edge` candidate
+  ("The post must maintain a purely optimistic tone") settled NON_COMPLIANT
+  (tx `0x9166f438…405a232`), the submitter appealed, and the ensemble reversed it
+  to COMPLIANT (tx `0x5476309b…ae727b29`), releasing the reservation, un-slashing
+  and refunding the 0.1 GEN bond (submitter balance rose by the bond minus the
+  appeal fee). Verified independently through the RPC by
+  `node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` (raw
+  evidence `e2e/evidence-appeal-refund.json`; full ledger before/after in
+  `docs/onchain-activity.md`). The deterministic accounting is also covered in
+  direct tests (`test_appeal_flips_non_compliant_to_compliant`,
+  `test_attack_withdraw_while_appealable_fails_then_win_refunds`). An individual
+  LLM flip still cannot be forced on command; it was earned here on a genuinely
+  ambiguous candidate, with no backdoor or owner override. The old studio-dev
+  instance `0x30A9…149E` is deprecated (it predates the appeal-reconsideration
+  frame).
 - Consensus on `evaluate`/`resolve`/`grade`-type writes depends on the shared
   validator set being available and converging; constructors and views are
   deterministic and were verified live on studio-dev.

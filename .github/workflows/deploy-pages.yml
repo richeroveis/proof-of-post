@@ -38,12 +38,13 @@ jobs:
           # already deployed on a public dev chain. Base path is the Pages
           # subpath for the project page.
           NEXT_PUBLIC_BASE_PATH: /proof-of-post
-          # F7 + withdraw-hardening RuleRegistry instance (2026-10-11), verified
-          # end-to-end on studio-dev via e2e/studio_devnet_e2e.mjs (deploy tx
-          # 0xfcdf651213c1414bad107cf869477976938e0910227867034b1dfc5aaaf660b6);
-          # supersedes the pre-F7 0x405e...b594 and pre-remediation 0x61eE...304b.
-          # See docs/onchain-activity.md.
-          NEXT_PUBLIC_CONTRACT_ADDRESS: "0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E"
+          # Appeal-reconsideration-frame RuleRegistry instance (2026-10-16),
+          # verdict reversal + refund verified end-to-end on studio-dev via
+          # e2e/appeal_refund_e2e.mjs (deploy tx
+          # 0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70);
+          # supersedes pre-frame 0x30A9...149E, pre-F7 0x405e...b594 and
+          # pre-remediation 0x61eE...304b. See docs/onchain-activity.md.
+          NEXT_PUBLIC_CONTRACT_ADDRESS: "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b"
           NEXT_PUBLIC_GENLAYER_RPC: https://studio-dev.genlayer.com/api
         run: npm run build
       - uses: actions/configure-pages@v5

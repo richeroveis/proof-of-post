@@ -1,51 +1,228 @@
 {
-  "startedAt": "2026-10-13T12:17:41.686Z",
+  "startedAt": "2026-10-16T07:14:44.588Z",
   "network": "studio-dev(61997)",
-  "contractSourceSha256": "d10623df4f8a2bccfaa02d4cb335cf70ea841400e88a3c791c4a510f62513743",
-  "address": "0x60F645c622C3CeAd7A61009b48DCfF46B9BA664C",
+  "contractSourceSha256": "92e94de8074a7d063468e1f64d556f8e1eb1d69c49a6b6fa4733d493e7c67f51",
+  "address": "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b",
   "steps": [
     {
       "step": "fund_submitter",
-      "at": "2026-10-13T12:17:53.015Z",
-      "hash": "0xbe6edf3434c38570c00edf91ce8eb9699b3fc717e93863905ede43661aac15fd",
+      "at": "2026-10-16T07:14:56.550Z",
+      "hash": "0xeb764b1733ca160fa3d0d721374ef48664ad50285b00f76edb9debc99e560698",
       "status": "UNDETERMINED",
       "verdicts": [],
       "attempt": 1
     },
     {
       "step": "fund_submitter",
-      "at": "2026-10-13T12:18:33.777Z",
-      "hash": "0x7c617f39b7cfa5dbf2cc131c78569be95b25c39c89dcaeacdfc4ab986731093a",
+      "at": "2026-10-16T07:15:37.371Z",
+      "hash": "0x1d876364cca3f239e80b6d9ffba17e4c32c895a74e4581babf13b3d5bd73ebd7",
       "status": "FINALIZED",
       "verdicts": [],
       "attempt": 2
     },
     {
       "step": "fund_balance",
-      "at": "2026-10-13T12:18:39.451Z",
+      "at": "2026-10-16T07:15:43.230Z",
       "sub_before": "0",
-      "sub_after": "6.5"
+      "sub_after": "2.2"
     },
     {
       "step": "deploy",
-      "at": "2026-10-13T12:19:18.186Z",
-      "hash": "0xa50b3c48cc7aea27b7ebe3608265cfc144be358744082696c1224fef6da59fa9",
+      "at": "2026-10-16T07:16:31.292Z",
+      "hash": "0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70",
       "status": "FINALIZED",
       "verdicts": [],
       "attempt": 1
     },
     {
       "step": "deploy_address",
-      "at": "2026-10-13T12:19:18.187Z",
-      "address": "0x60F645c622C3CeAd7A61009b48DCfF46B9BA664C"
+      "at": "2026-10-16T07:16:31.294Z",
+      "address": "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b"
+    },
+    {
+      "step": "set_treasury",
+      "at": "2026-10-16T07:17:22.691Z",
+      "hash": "0x34c00710d3566f6c8842d98de2c8735c162825d379d34b7ad957d73d4c03831e",
+      "status": "FINALIZED",
+      "verdicts": [],
+      "attempt": 1
+    },
+    {
+      "step": "C0_submit",
+      "at": "2026-10-16T07:18:12.098Z",
+      "hash": "0x3a4b946b2babd3051b42ac840231cecf268df813e7f1373aa7166adf018bd5d9",
+      "status": "FINALIZED",
+      "verdicts": [],
+      "attempt": 1
+    },
+    {
+      "step": "C0_evaluate",
+      "at": "2026-10-16T07:19:15.182Z",
+      "hash": "0x2cf5ff13868bb1e482178b1ad97347f115a22a4a6ed811634853e7ddbac1ffd7",
+      "status": "FINALIZED",
+      "verdicts": [
+        "COMPLIANT"
+      ],
+      "attempt": 1
+    },
+    {
+      "step": "C1_submit",
+      "at": "2026-10-16T07:20:12.438Z",
+      "hash": "0xcae5d21a9b34d93a9cb0ec1f457325125d0f1dac2771b92a12fdc8d64f6af24b",
+      "status": "FINALIZED",
+      "verdicts": [],
+      "attempt": 1
+    },
+    {
+      "step": "C1_evaluate",
+      "at": "2026-10-16T07:21:06.000Z",
+      "hash": "0x9166f43837139e236f72d42161e07e711c3fedd368e00b05b132b93c4405a232",
+      "status": "FINALIZED",
+      "verdicts": [
+        "NON_COMPLIANT",
+        "COMPLIANT"
+      ],
+      "attempt": 1
+    },
+    {
+      "step": "C1_appeal_1",
+      "at": "2026-10-16T07:21:58.796Z",
+      "hash": "0x5476309ba29ff549f83c76e484010e851819c7813dde2481eb2f9147ae727b29",
+      "status": "FINALIZED",
+      "verdicts": [
+        "COMPLIANT"
+      ],
+      "attempt": 1
+    },
+    {
+      "step": "APPEAL_REFUND_PROVEN",
+      "at": "2026-10-16T07:22:05.854Z",
+      "entry_id": 1,
+      "checks": {
+        "verdict_transition": true,
+        "slashed_decreased_by_bond": true,
+        "reserved_decreased_by_bond": true,
+        "verified_increased": true,
+        "deadline_zeroed": true,
+        "contract_balance_decreased_by_bond": true,
+        "submitter_refunded_minus_fees": true,
+        "conservation_before": true,
+        "conservation_after": true
+      },
+      "candidate": "Mixed-tone edge"
+    },
+    {
+      "step": "expectations_summary",
+      "at": "2026-10-16T07:22:05.857Z",
+      "final": {
+        "address": "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b",
+        "entry_id": 1,
+        "expect_status": "COMPLIANT",
+        "expect_appeal_deadline": "0",
+        "expect_appeal_count_min": 1,
+        "success_appeal_hash": "0x5476309ba29ff549f83c76e484010e851819c7813dde2481eb2f9147ae727b29",
+        "require_no_unsuccessful_consensus": true
+      },
+      "tx_count": 2
+    },
+    {
+      "step": "sweep_submitter",
+      "at": "2026-10-16T07:22:16.771Z",
+      "hash": "0xc578011774e6c205d97bd0ee374e217bb3a8d6f410fc523020dc608940da5b1d",
+      "status": "FINALIZED",
+      "swept": "2.198508127999995885"
     }
   ],
-  "candidates": [],
+  "candidates": [
+    {
+      "index": 0,
+      "title": "Hyphenated word-count edge",
+      "rules": "Must be written in English\nMust contain at most 10 words",
+      "content": "Well-known expert said late-night review is done, ship it tomorrow!",
+      "txs": {
+        "submit": "0x3a4b946b2babd3051b42ac840231cecf268df813e7f1373aa7166adf018bd5d9",
+        "evaluate": "0x2cf5ff13868bb1e482178b1ad97347f115a22a4a6ed811634853e7ddbac1ffd7"
+      },
+      "outcome": "NOT_SLASHED (COMPLIANT)",
+      "initial_verdict": "COMPLIANT",
+      "before": {
+        "slashed_total": "0",
+        "reserved_slashed": "0",
+        "withdrawn_slashed": "0",
+        "available_slashed": "0",
+        "verified": "1",
+        "contract_balance": "0",
+        "appeal_deadline": "0",
+        "appeal_count": "0",
+        "submitter_balance": "2199794199999998354"
+      }
+    },
+    {
+      "index": 1,
+      "title": "Mixed-tone edge",
+      "rules": "The post must maintain a purely optimistic tone",
+      "content": "We are disappointed the launch slipped two weeks, but thrilled every beta user stayed and the fix is live.",
+      "txs": {
+        "submit": "0xcae5d21a9b34d93a9cb0ec1f457325125d0f1dac2771b92a12fdc8d64f6af24b",
+        "evaluate": "0x9166f43837139e236f72d42161e07e711c3fedd368e00b05b132b93c4405a232",
+        "appeal_1": "0x5476309ba29ff549f83c76e484010e851819c7813dde2481eb2f9147ae727b29"
+      },
+      "outcome": "REFUNDED_ON_CHAIN",
+      "initial_verdict": "NON_COMPLIANT",
+      "before": {
+        "slashed_total": "100000000000000000",
+        "reserved_slashed": "100000000000000000",
+        "withdrawn_slashed": "0",
+        "available_slashed": "0",
+        "verified": "1",
+        "contract_balance": "100000000000000000",
+        "appeal_deadline": "9",
+        "appeal_count": "0",
+        "submitter_balance": "2099635727999996708"
+      },
+      "final": {
+        "status": "COMPLIANT",
+        "appeal_count": "1",
+        "appeal_deadline": "0",
+        "slashed_total": "0",
+        "reserved_slashed": "0",
+        "withdrawn_slashed": "0",
+        "available_slashed": "0",
+        "verified": "2",
+        "contract_balance": "0",
+        "submitter_balance": "2199508127999995885"
+      },
+      "checks": {
+        "verdict_transition": true,
+        "slashed_decreased_by_bond": true,
+        "reserved_decreased_by_bond": true,
+        "verified_increased": true,
+        "deadline_zeroed": true,
+        "contract_balance_decreased_by_bond": true,
+        "submitter_refunded_minus_fees": true,
+        "conservation_before": true,
+        "conservation_after": true
+      },
+      "submitter_delta_wei": "99872399999999177"
+    }
+  ],
   "expectations": {
     "txs": [
       {
         "label": "fund_submitter",
-        "hash": "0x7c617f39b7cfa5dbf2cc131c78569be95b25c39c89dcaeacdfc4ab986731093a",
+        "hash": "0x1d876364cca3f239e80b6d9ffba17e4c32c895a74e4581babf13b3d5bd73ebd7",
+        "must_finalize": true,
+        "forbid": [
+          "[EXPECTED]",
+          "[LLM_ERROR]",
+          "[TRANSIENT]",
+          "[EXTERNAL]"
+        ],
+        "verdict_contains": null
+      },
+      {
+        "label": "deploy",
+        "hash": "0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70",
         "must_finalize": true,
         "forbid": [
           "[EXPECTED]",
@@ -56,7 +233,15 @@
         "verdict_contains": null
       }
     ],
-    "final": null
+    "final": {
+      "address": "0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b",
+      "entry_id": 1,
+      "expect_status": "COMPLIANT",
+      "expect_appeal_deadline": "0",
+      "expect_appeal_count_min": 1,
+      "success_appeal_hash": "0x5476309ba29ff549f83c76e484010e851819c7813dde2481eb2f9147ae727b29",
+      "require_no_unsuccessful_consensus": true
+    }
   },
-  "success": false
+  "success": true
 }

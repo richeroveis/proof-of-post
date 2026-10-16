@@ -5,72 +5,96 @@ every write path and the money that moves with it. Nothing here is mocked;
 every hash below is queryable on `studio-dev` (chain ID 61997) at
 https://studio-dev.genlayer.com/api.
 
-## Appeal-refund live proof 2026-10-13 - IN PROGRESS, blocked by studio-dev outage
+## Appeal-refund live proof 2026-10-16 - RECOVERED and PROVEN (G1 closed)
 
 Remediation for the resubmission rejection G1: a dedicated live scenario
 (`e2e/appeal_refund_e2e.mjs`) that deploys the CURRENT source (appeal
-reconsideration frame, sha256 `d10623df…`) fresh on each attempt and runs the
-exact lifecycle `submit -> evaluate -> NON_COMPLIANT -> appeal -> COMPLIANT ->
-refund` against genuinely ambiguous candidates, recording before/after on-chain
-state, native-balance deltas and a machine-checkable evidence file
+reconsideration frame, sha256 `92e94de8…`, which matches the committed
+`contracts/rule_registry.py`) fresh on each attempt and runs the exact lifecycle
+`submit -> evaluate -> NON_COMPLIANT -> appeal -> COMPLIANT -> refund` against
+genuinely ambiguous candidates, recording before/after on-chain state,
+native-balance deltas and a machine-checkable evidence file
 (`e2e/evidence-appeal-refund.json`) that `frontend/verify_evidence.mjs`
 re-verifies through the RPC independently of the driver log.
 
-Status as of this writing: **no completed run yet, so G1 live proof is NOT
-demonstrated and resubmission must not proceed on it.** From ~06:30 UTC the
-studio-dev backend refuses most operations with storage-layer errors
-(`psycopg2.errors.DiskFull` on transaction INSERTs, "Can't reconnect until
-invalid transaction is rolled back", "database system is in recovery mode",
-`-32603` on both writes and `gen_call` reads). Attempt logs: `e2e/attempt_1.log`
-through `e2e/attempt_15.log` plus `e2e/retry_driver*.log`. One attempt reached a
-FINALIZED deploy of the frame source
+## Verdict-reversing appeal with refund (reviewer G1): ACHIEVED
+
+Live instance `0xC0d33d779d12Ae43f0Fe890fc13906631B7a377b` on studio-dev
+(chainId 61997), deployed 2026-10-16 from the committed source
+(sha256 `92e94de8074a7d063468e1f64d556f8e1eb1d69c49a6b6fa4733d493e7c67f51`).
+Every hash below is queryable at https://studio-dev.genlayer.com/api. The bond
+here is 0.1 GEN (100000000000000000 wei): studio-dev is not gasless and the owner
+development wallet holds a small balance, and the reversal/reservation/refund
+path under test is amount-independent. Every attempt is logged, including the one
+that did not need a flip.
+
+Setup transactions (owner/deployer = repo studio-dev key; submitter and treasury =
+throwaway in-memory keys, never persisted, swept back at the end):
+
+| # | Call | Tx | Outcome (all FINALIZED) |
+|---|---|---|---|
+| - | `fund_submitter` (attempt 1) | `0xeb764b1733ca160fa3d0d721374ef48664ad50285b00f76edb9debc99e560698` | UNDETERMINED (consensus round failed; never executed, so resubmitting cannot double-run) |
+| - | `fund_submitter` (attempt 2) | `0x1d876364cca3f239e80b6d9ffba17e4c32c895a74e4581babf13b3d5bd73ebd7` | submitter funded 0 -> 2.2 GEN |
+| 1 | `deploy` (fee-aware) | `0xde7696887c8e91a346572cf1eedbd296311c42d017c0d09a25ef18d8c4178b70` | contract `0xC0d3…377b` |
+| 2 | `set_treasury` | `0x34c00710d3566f6c8842d98de2c8735c162825d379d34b7ad957d73d4c03831e` | treasury configured |
+| 3 | C0 `evaluate` (Hyphenated word-count edge) | `0x2cf5ff13868bb1e482178b1ad97347f115a22a4a6ed811634853e7ddbac1ffd7` | **COMPLIANT** up front (not slashed): a legitimate non-flip, logged |
+| 4 | C1 `submit` (Mixed-tone edge, 0.1 GEN bond) | `0xcae5d21a9b34d93a9cb0ec1f457325125d0f1dac2771b92a12fdc8d64f6af24b` | entry id **1**, PENDING |
+| 5 | C1 `evaluate` | `0x9166f43837139e236f72d42161e07e711c3fedd368e00b05b132b93c4405a232` | **NON_COMPLIANT**, bond slashed + reserved |
+| 6 | **C1 `appeal`** (submitter) | `0x5476309ba29ff549f83c76e484010e851819c7813dde2481eb2f9147ae727b29` | **COMPLIANT** (verdict reversed), reservation released, bond un-slashed + refunded |
+| 7 | sweep throwaway submitter back to owner | `0xc578011774e6c205d97bd0ee374e217bb3a8d6f410fc523020dc608940da5b1d` | 2.1985 GEN returned |
+
+Ledger around the reversal (entry id 1, bond 100000000000000000 wei):
+
+| Field | Before appeal (after evaluate) | After appeal (COMPLIANT) |
+|---|---|---|
+| `entry.status` | NON_COMPLIANT | COMPLIANT |
+| `entry.appeal_count` | 0 | 1 |
+| `entry.appeal_deadline` | 9 | 0 |
+| `slashed_total` | 100000000000000000 | 0 |
+| `reserved_slashed` | 100000000000000000 | 0 |
+| `withdrawn_slashed` | 0 | 0 |
+| `available_slashed` | 0 | 0 |
+| `verified` | 1 | 2 |
+| contract native balance | 100000000000000000 | 0 |
+| submitter native balance | 2099635727999996708 | 2199508127999995885 |
+
+Submitter delta: **+99872399999999177 wei** (~0.09987 GEN): the full 0.1 GEN bond
+was un-slashed and sent back to the submitter via an external EVM message, minus
+the appeal transaction's consumed fee. Conservation invariant held before and
+after (`slashed_total >= withdrawn_slashed + reserved_slashed`).
+
+The appeal flipped the verdict because the `appeal()` reconsideration frame
+requires a clear violation and resolves genuine ambiguity in favor of the
+submitter: the mixed-tone post ("disappointed the launch slipped ... but thrilled
+every beta user stayed") is a defensible `purely optimistic tone` reading, which
+the ensemble accepted on reconsideration. The flip was earned, not forced: no
+backdoor, no owner override, no edited result.
+
+Independent verification: `node frontend/verify_evidence.mjs
+e2e/evidence-appeal-refund.json` re-queries the recorded hashes and the live
+contract directly against the RPC and returns **ALL EXPECTATIONS INDEPENDENTLY
+VERIFIED** (exit 0), with final live readback `status=COMPLIANT appeals=1
+deadline=0 slashed=0 reserved=0 withdrawn=0 verified=2`. G1 is CLOSED.
+
+## Outage history (kept for traceability)
+
+Before this successful run, the studio-dev backend had a server-side storage
+outage that made the proof impossible to verify from 2026-10-13. It refused most
+operations with `psycopg2.errors.DiskFull`, "Can't reconnect until invalid
+transaction is rolled back", "database system is in recovery mode", and `-32603`
+on both writes and `gen_call` reads. Across that period 15 driver attempts plus a
+24-poll read monitor (17:50:50Z to 18:10:34Z, every poll failed) produced no
+completed, verifiable run, and an unverifiable deploy was deliberately not fired
+because the proof depends on reading the flipped verdict and balance delta back.
+A monitor on 2026-10-16 showed `gen_call` recovered (5/5 reads OK), and the run
+above was completed on studio-dev rather than migrating to studionet. One earlier
+attempt had reached a FINALIZED deploy of an interim frame source
 (`0x6520063Ba2D28eE6123D2a93E73b90c2FBf59058`, tx
 `0xdd75bd75b40deaa3bf11cc3cf16876f041bdab016e7dff97d23419b2ec300231`) before a
-degraded-DB read killed the run; that instance executed zero lifecycle steps
-and is recorded here only for traceability, not as evidence. Rerun with
-`cd e2e && ./retry_driver.sh`; the acceptance evidence is a run with
-`success: true` whose verifier exits 0.
+degraded-DB read killed the run; that instance executed zero lifecycle steps and
+is recorded only for traceability, not as evidence.
 
-### Verdict-reversing appeal with refund: NOT achieved (reviewer G1)
-
-Target flow, exactly what the reviewer asked to see: `submit -> evaluate ->
-NON_COMPLIANT (bond slashed + reserved) -> appeal -> COMPLIANT (verdict
-reversed) -> reservation released, bond un-slashed, submitter native balance
-up by the bond`, every step read back from the live contract with tx hashes and
-before/after ledger numbers (`slashed_total`, `reserved_slashed`,
-`withdrawn_slashed`, `bonded_pending`) and a submitter balance delta.
-
-**This pass (2026-10-13) the flow could not be executed or verified, so NO such
-refund exists to report.** The blocker is the studio-dev storage outage, which
-was still in effect when this pass ran. A read-only `gen_call` health monitor
-polled `get_stats` on the current instance 24 times over ~20 minutes; every
-single poll failed with `Can't reconnect until invalid transaction is rolled
-back`, while stateless RPC (`eth_chainId` and `estimateTransactionFees`) kept
-responding. Full timestamps (UTC): polls 1-24 at 17:50:50, 17:51:41, 17:52:32,
-17:53:23, 17:54:14, 17:55:05, 17:55:56, 17:56:53, 17:57:44, 17:58:34, 17:59:25,
-18:00:16, 18:01:07, 18:01:58, 18:02:50, 18:03:41, 18:04:31, 18:05:22, 18:06:16,
-18:07:09, 18:08:02, 18:08:53, 18:09:44, 18:10:34; final result `gen_call still
-DOWN after full window`. This is on top of the 15 driver attempts earlier the
-same day.
-
-Because the proof requires reading the flipped verdict and the balance delta
-back from the chain, deploying and firing an appeal whose result cannot be read
-would spend fees and produce no verifiable evidence, so no lifecycle transactions
-were submitted this pass. The candidate set in `e2e/appeal_refund_e2e.mjs` was
-widened from 4 to 10 genuinely ambiguous posts (hyphenated/soft word counts,
-mixed tone, sentence segmentation, substring word-form mentions, emoticon-vs-
-emoji, digits-vs-words, sentence capitalization, formality/exclamation) so that a
-single recovered run gets many honest chances to earn a flip from the ensemble.
-
-**Honest status:** G1 remains OPEN. The reversal/refund accounting is proven
-only in direct tests (`test_appeal_flips_non_compliant_to_compliant`,
-`test_attack_withdraw_while_appealable_fails_then_win_refunds`); it has never
-been shown live. Resubmission must not claim it until `cd e2e &&
-./retry_driver.sh` yields a `success: true` evidence file that
-`node frontend/verify_evidence.mjs e2e/evidence-appeal-refund.json` re-verifies
-with exit 0.
-
-## F7 + withdraw-hardening regression 2026-10-11 - `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (CURRENT)
+## F7 + withdraw-hardening regression 2026-10-11 - `0x30A9A1D88E8885319a9f5F259D5C416Bd55d149E` (SUPERSEDED by `0xC0d3…377b`, kept as history)
 
 Full scripted run: `e2e/studio_devnet_e2e.mjs` (structured evidence in
 `e2e/evidence.json`, raw `raw` fields stripped). Distinct wallets: owner/deployer
